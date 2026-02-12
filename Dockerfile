@@ -32,8 +32,9 @@ COPY . .
 # - input_videos: uploaded/sample videos
 # - /tmp/Ultralytics: YOLO model cache
 RUN mkdir -p backend/thumbnails \
-    backend/input_videos \
     /tmp/Ultralytics
+
+COPY 
 
 # Set proper permissions
 # 755 = rwxr-xr-x (owner: read/write/execute, group: read/execute, others: read/execute)
