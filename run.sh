@@ -8,9 +8,9 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$DIR/backend"
 
 # Check for video
-if [ ! -f "${VIDEO_PATH:-video.mp4}" ] && [ ! -f "../video.mp4" ]; then
+if [ ! -f "${VIDEO_PATH:-video.mp4}" ] && [ ! -f "input_videos/video.mp4" ]; then
     echo "⚠  No video.mp4 found. Place a video file at:"
-    echo "   $DIR/backend/video.mp4"
+    echo "   $DIR/backend/input_videos/video.mp4"
     echo "   or set VIDEO_PATH=/path/to/video.mp4"
     echo ""
 fi
