@@ -1,3 +1,14 @@
+---
+title: Animal Tracking V2
+emoji: 📊
+colorFrom: yellow
+colorTo: yellow
+sdk: docker
+pinned: false
+---
+Check out the configuration reference at https://huggingface.co/docs/hub/sp
+
+
 # 🦁 Animal Tracker
 
 Real-time animal detection, tracking, and identification system powered by YOLO, Qwen VLM, and Gemini.
