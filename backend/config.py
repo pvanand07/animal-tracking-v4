@@ -24,7 +24,7 @@ _SCHEMA = {
     "thumbnails_dir": ("thumbnails", str),
     "database_path": ("animal_tracker.db", str),
     "host": ("0.0.0.0", str),
-    "port": ("8000", int),
+    "port": ("7860", int),
 }
 
 
