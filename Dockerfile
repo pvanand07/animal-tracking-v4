@@ -34,8 +34,6 @@ COPY . .
 RUN mkdir -p backend/thumbnails \
     /tmp/Ultralytics
 
-COPY 
-
 # Set proper permissions
 # 755 = rwxr-xr-x (owner: read/write/execute, group: read/execute, others: read/execute)
 # 777 = rwxrwxrwx (full permissions for all - used for writable directories)
