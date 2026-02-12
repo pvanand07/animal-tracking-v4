@@ -24,7 +24,7 @@ _SCHEMA = {
     "thumbnails_dir": ("thumbnails", str),
     "database_path": ("animal_tracker.db", str),
     "host": ("0.0.0.0", str),
-    "port": ("7860", int),
+    "port": ("8000", int),
 }
 
 
@@ -41,6 +41,15 @@ class Config:
 
     def _get(self, key: str):
         default, cast = _SCHEMA[key]
+        if key == "openrouter_api_key":
+            # Always load from process environment variable, fallback to config.json > default
+            v = os.getenv("OPENROUTER_API_KEY")
+            if v is not None and v != "":
+                return cast(v)
+            v = self._overrides.get(key)
+            if v is not None and (v != "" if isinstance(v, str) else True):
+                return cast(v)
+            return cast(default)
         v = self._overrides.get(key)
         if v is not None and (v != "" if isinstance(v, str) else True):
             return cast(v)
