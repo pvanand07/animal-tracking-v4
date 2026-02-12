@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AC Future · Wildlife Monitor</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base: #0c0f14;
+      --bg-surface: rgba(16, 20, 28, 0.85);
+      --bg-elevated: rgba(22, 28, 38, 0.9);
+      --bg-glass: rgba(255, 255, 255, 0.03);
+      --bg-glass-hover: rgba(255, 255, 255, 0.06);
+      --bg-glass-active: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --border-medium: rgba(255, 255, 255, 0.1);
+      --border-accent: rgba(212, 175, 118, 0.25);
+      --text-primary: #f0ece4;
+      --text-secondary: rgba(240, 236, 228, 0.6);
+      --text-muted: rgba(240, 236, 228, 0.35);
+      --accent-warm: #d4af76;
+      --accent-warm-dim: rgba(212, 175, 118, 0.15);
+      --accent-warm-glow: rgba(212, 175, 118, 0.3);
+      --accent-teal: #5ec4b6;
+      --accent-teal-dim: rgba(94, 196, 182, 0.12);
+      --accent-red: #e85d5d;
+      --accent-red-dim: rgba(232, 93, 93, 0.12);
+      --accent-green: #6ec87a;
+      --accent-green-dim: rgba(110, 200, 122, 0.12);
+      --accent-amber: #e8a84c;
+      --font-main: 'Outfit', -apple-system, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+      --radius-xs: 6px;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --blur: 24px;
+      --blur-heavy: 40px;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-base);
+      color: var(--text-primary);
+    }
+
+    /* Ambient background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 80%, rgba(212, 175, 118, 0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 20%, rgba(94, 196, 182, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 100% at 50% 50%, rgba(12, 15, 20, 1) 0%, rgba(12, 15, 20, 1) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle noise texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.015;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #app { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Top Bar ──────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(var(--blur-heavy));
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      z-index: 50;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-mark svg { width: 28px; height: 28px; }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .brand-name {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-warm);
+      margin-top: 2px;
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(12px);
+      color: var(--text-secondary);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .chip-btn {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .chip-btn:hover {
+      background: var(--bg-glass-hover);
+      border-color: var(--border-medium);
+    }
+
+    .chip-btn:active {
+      background: var(--bg-glass-active);
+    }
+
+    .chip-btn.active-state {
+      border-color: var(--accent-warm);
+      background: var(--accent-warm-dim);
+      color: var(--accent-warm);
+    }
+
+    .pulse-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      flex-shrink: 0;
+    }
+
+    .pulse-dot.live {
+      animation: pulse 2s ease infinite;
+      box-shadow: 0 0 6px rgba(110, 200, 122, 0.5);
+    }
+
+    .pulse-dot.off { background: var(--text-muted); }
+    .pulse-dot.amber { background: var(--accent-amber); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .chip svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+
+    /* ── Main Grid ────────────────────────── */
+    .main-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      grid-template-rows: 1fr;
+      gap: 1px;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .col-left {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .col-right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-surface);
+      backdrop-filter: blur(var(--blur));
+      border-left: 1px solid var(--border-subtle);
+    }
+
+    /* ── Stream View ──────────────────────── */
+    .stream-wrap {
+      flex: 1;
+      position: relative;
+      background: #000;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .stream-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .stream-overlay-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .stream-overlay-top > * { pointer-events: auto; }
+
+    .stream-tags {
+      display: flex;
+      gap: 6px;
+    }
+
+    .stream-tag {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      letter-spacing: 0.04em;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.7);
+    }
+
+    .stream-tag.rec {
+      background: rgba(232, 93, 93, 0.2);
+      border-color: rgba(232, 93, 93, 0.3);
+      color: var(--accent-red);
+    }
+
+    .stream-tag.rec::before {
+      content: '';
+      display: inline-block;
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      margin-right: 5px;
+      animation: pulse 1.5s ease infinite;
+    }
+
+    .stream-stats {
+      display: flex;
+      gap: 6px;
+    }
+
+    .stream-stat {
+      padding: 4px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.5);
+    }
+
+    .stream-overlay-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    .no-stream {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 16px;
+      color: var(--text-muted);
+    }
+
+    .no-stream-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      opacity: 0.4;
+    }
+
+    .no-stream-text {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .no-stream-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ── Right Sidebar Tabs ───────────────── */
+    .sidebar-tabs {
+      display: flex;
+      padding: 8px 12px;
+      gap: 4px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .sidebar-tab {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-main);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+      letter-spacing: 0.02em;
+      position: relative;
+    }
+
+    .sidebar-tab:hover { color: var(--text-secondary); }
+
+    .sidebar-tab.active {
+      color: var(--accent-warm);
+      background: var(--accent-warm-dim);
+    }
+
+    .sidebar-tab .tab-count {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      margin-left: 4px;
+      opacity: 0.7;
+    }
+
+    /* ── Sidebar Content ──────────────────── */
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      min-height: 0;
+    }
+
+    .sidebar-content::-webkit-scrollbar { width: 4px; }
+    .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-content::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 2px; }
+
+    /* ── Event Cards ──────────────────────── */
+    .event-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+      transition: all 0.25s ease;
+      animation: cardIn 0.35s ease;
+    }
+
+    .event-item:hover {
+      background: var(--bg-glass-hover);
+      border-color: var(--border-medium);
+    }
+
+    .event-item.is-active { border-color: var(--accent-teal); border-left: 3px solid var(--accent-teal); }
+    .event-item.is-identified { border-color: var(--accent-warm); border-left: 3px solid var(--accent-warm); }
+    .event-item.is-ended { opacity: 0.5; }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .thumb {
+      width: 56px;
+      height: 56px;
+      min-width: 56px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb .ph { font-size: 22px; opacity: 0.2; }
+
+    .card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 100px;
+    }
+
+    .status-pill.tracking { background: var(--accent-teal-dim); color: var(--accent-teal); }
+    .status-pill.identified { background: var(--accent-warm-dim); color: var(--accent-warm); }
+    .status-pill.ended { background: rgba(255,255,255,0.04); color: var(--text-muted); }
+
+    .track-id {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+    }
+
+    .animal-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .scientific-name {
+      font-size: 10px;
+      font-style: italic;
+      color: var(--accent-warm);
+      opacity: 0.8;
+    }
+
+    .card-desc {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .card-meta .time-pill {
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    /* ── Detection Cards ──────────────────── */
+    .det-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .det-item:hover {
+      background: var(--bg-glass-hover);
+      border-color: var(--border-medium);
+      transform: translateX(2px);
+    }
+
+    .det-info { flex: 1; min-width: 0; }
+
+    .det-name { font-size: 14px; font-weight: 600; }
+    .det-sci { font-size: 10px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
+
+    .det-bottom {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .safety-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .safety-badge.safe { background: var(--accent-green-dim); color: var(--accent-green); }
+    .safety-badge.danger { background: var(--accent-red-dim); color: var(--accent-red); }
+
+    .det-meta-right {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    /* ── Animals DB ────────────────────────── */
+    .animals-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .animal-row {
+      display: grid;
+      grid-template-columns: 2fr 1.5fr 1fr;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px;
+      align-items: center;
+    }
+
+    .animal-row:hover { background: var(--bg-glass-hover); }
+
+    .animal-row .ar-name { font-weight: 600; color: var(--text-primary); }
+    .animal-row .ar-sci { font-size: 10px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
+    .animal-row .ar-family { color: var(--text-secondary); font-size: 11px; }
+
+    /* ── Empty State ──────────────────────── */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+      color: var(--text-muted);
+      text-align: center;
+      gap: 8px;
+    }
+
+    .empty-icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      opacity: 0.3;
+    }
+
+    .empty-text { font-size: 13px; font-weight: 500; }
+    .empty-hint { font-size: 11px; }
+
+    /* ── Chat Drawer ──────────────────────── */
+    .chat-drawer {
+      position: fixed;
+      top: 0; right: 0;
+      width: 400px;
+      max-width: 100%;
+      height: 100vh;
+      background: var(--bg-surface);
+      backdrop-filter: blur(var(--blur-heavy));
+      border-left: 1px solid var(--border-subtle);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .chat-drawer.open { transform: translateX(0); }
+
+    .chat-drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .chat-drawer-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-close-btn {
+      width: 32px; height: 32px;
+      border: none;
+      background: var(--bg-glass);
+      color: var(--text-muted);
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .chat-close-btn:hover { background: var(--bg-glass-hover); color: var(--text-primary); }
+
+    .chat-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .chat-empty-msg {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 32px 16px;
+      line-height: 1.6;
+    }
+
+    .chat-bubble {
+      max-width: 88%;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .chat-bubble.user {
+      align-self: flex-end;
+      background: var(--accent-warm);
+      color: var(--bg-base);
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-bubble.bot {
+      align-self: flex-start;
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-bubble .chat-md p { margin: 0 0 6px; }
+    .chat-bubble .chat-md p:last-child { margin-bottom: 0; }
+    .chat-bubble .chat-md pre {
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: var(--radius-xs);
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      overflow-x: auto;
+      font-size: 11px;
+      font-family: var(--font-mono);
+    }
+    .chat-bubble .chat-md code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg-base);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .chat-bubble .chat-md pre code { padding: 0; background: none; }
+
+    .chat-tool-block {
+      padding: 4px 0 6px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 6px;
+    }
+
+    .chat-tool-item {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .chat-tool-item .tool-name {
+      font-family: var(--font-mono);
+      color: var(--accent-teal);
+    }
+
+    .chat-typing-dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-teal);
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.5); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-main);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .chat-input:focus { border-color: var(--accent-warm); }
+    .chat-input::placeholder { color: var(--text-muted); }
+
+    .chat-send-btn {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent-warm);
+      color: var(--bg-base);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .chat-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
+    .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── FAB ───────────────────────────────── */
+    .fab {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent-warm);
+      color: var(--bg-base);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(212, 175, 118, 0.35);
+      z-index: 190;
+      transition: all 0.25s ease;
+    }
+
+    .fab:hover { transform: scale(1.06); box-shadow: 0 6px 28px rgba(212, 175, 118, 0.45); }
+
+    /* ── Detection Modal ──────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal-card {
+      width: 100%;
+      max-width: 680px;
+      max-height: 88vh;
+      background: var(--bg-surface);
+      backdrop-filter: blur(var(--blur-heavy));
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: modalUp 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes modalUp {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-title .sci { font-size: 12px; font-weight: 400; font-style: italic; color: var(--accent-warm); }
+
+    .modal-close-btn {
+      width: 34px; height: 34px;
+      border: none;
+      background: var(--bg-glass);
+      color: var(--text-secondary);
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close-btn:hover { background: var(--bg-glass-hover); color: var(--text-primary); }
+
+    .modal-body {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-video {
+      position: relative;
+      width: 100%;
+      background: #000;
+      min-height: 200px;
+    }
+
+    .modal-video img { width: 100%; max-height: 300px; object-fit: contain; display: block; }
+
+    .modal-video-ph {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      gap: 6px;
+    }
+
+    .modal-sections { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+
+    .info-block {
+      background: var(--bg-glass);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .info-block h4 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px 16px;
+    }
+
+    .info-cell { display: flex; flex-direction: column; gap: 2px; }
+    .info-cell .lbl { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+    .info-cell .val { font-size: 12px; color: var(--text-primary); font-family: var(--font-mono); }
+    .info-cell .val.txt { font-family: var(--font-main); }
+
+    .info-desc {
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+    }
+
+    .event-time-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .event-time-pills span {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      background: var(--bg-base);
+      border-radius: var(--radius-xs);
+    }
+
+    .modal-loading {
+      padding: 48px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ── Settings Modal ───────────────────── */
+    .settings-card { max-width: 460px; }
+
+    .settings-hint { font-size: 11px; color: var(--text-muted); padding: 0 20px 4px; }
+
+    .settings-form { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+    .s-row { display: flex; flex-direction: column; gap: 4px; }
+    .s-row label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+
+    .s-row input[type="text"],
+    .s-row input[type="number"],
+    .s-row input[type="password"],
+    .s-row select {
+      padding: 8px 12px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .s-row input:focus, .s-row select:focus { border-color: var(--accent-warm); }
+
+    .s-row-check label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .s-video-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .s-video-row select { flex: 1; min-width: 0; }
+
+    .upload-btn {
+      padding: 8px 14px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border-medium);
+      background: var(--bg-glass);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .upload-btn:hover { background: var(--bg-glass-hover); border-color: var(--accent-warm); }
+
+    .settings-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px 16px;
+    }
+
+    .btn-primary {
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--accent-warm);
+      color: var(--bg-base);
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-reset { padding: 10px 20px; border-radius: var(--radius-sm); border: 1px solid var(--text-muted); background: transparent; color: var(--text-muted); font-size: 12px; cursor: pointer; margin-left: auto; }
+    .btn-reset:hover:not(:disabled) { color: var(--accent-warm); border-color: var(--accent-warm); }
+    .btn-reset:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .save-msg { font-size: 11px; color: var(--accent-green); }
+
+    /* ── Responsive ────────────────────────── */
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .col-right { max-height: 50vh; }
+    }
+
+    @media (max-width: 480px) {
+      .chat-drawer { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 32 32" fill="none">
+          <path d="M16 2L4 12l4 0 0 14h16V12l4 0L16 2z" fill="none" stroke="var(--accent-warm)" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M12 26v-8h8v8" fill="none" stroke="var(--accent-warm)" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">AC Future</span>
+        <span class="brand-sub">Wildlife Monitor</span>
+      </div>
+    </div>
+    <div class="topbar-controls">
+      <button type="button"
+        class="chip chip-btn"
+        :class="{ 'active-state': status.tracker_running }"
+        @click="toggleTracking"
+        :title="status.tracker_running ? 'Pause tracking' : 'Start tracking'">
+        <span class="pulse-dot" :class="status.tracker_running ? 'live' : 'off'"></span>
+        {{ status.tracker_running ? 'Tracking' : 'Paused' }}
+      </button>
+      <button type="button" class="chip chip-btn" @click="chatOpen = true">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Chat
+      </button>
+      <button type="button" class="chip chip-btn" @click="settingsOpen = true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <div class="chip">
+        <span class="pulse-dot" :class="status.tracker_running ? 'live' : 'off'"></span>
+        {{ status.tracker_running ? 'LIVE' : 'OFF' }}
+      </div>
+      <div class="chip"><span class="pulse-dot amber"></span>{{ status.fps }} FPS</div>
+      <div class="chip">{{ status.active_tracks }} tracks</div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="main-grid">
+    <!-- Stream -->
+    <div class="col-left">
+      <div class="stream-wrap">
+        <img v-if="streamActive" :src="streamUrl" alt="Stream" @error="onStreamError" />
+        <div v-else class="no-stream">
+          <div class="no-stream-icon">📡</div>
+          <div class="no-stream-text">Awaiting stream</div>
+          <div class="no-stream-hint">Upload or select a video in Settings</div>
+        </div>
+        <div v-if="streamActive" class="stream-overlay-top">
+          <div class="stream-tags">
+            <span class="stream-tag rec">REC</span>
+            <span class="stream-tag">YOLO · BoTSORT</span>
+          </div>
+          <div class="stream-stats">
+            <span class="stream-stat">{{ status.fps }} fps</span>
+            <span class="stream-stat">{{ status.frame_count }} frames</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-right">
+      <div class="sidebar-tabs">
+        <button class="sidebar-tab" :class="{ active: rightTab === 'events' }" @click="rightTab = 'events'">
+          Events<span class="tab-count" v-if="events.length">{{ events.length }}</span>
+        </button>
+        <button class="sidebar-tab" :class="{ active: rightTab === 'detections' }" @click="rightTab = 'detections'">
+          Detections<span class="tab-count" v-if="detections.length">{{ detections.length }}</span>
+        </button>
+        <button class="sidebar-tab" :class="{ active: rightTab === 'animals' }" @click="rightTab = 'animals'">
+          Species DB
+        </button>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- Events -->
+        <template v-if="rightTab === 'events'">
+          <div v-if="events.length === 0" class="empty">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-text">No events yet</div>
+            <div class="empty-hint">Events appear when objects are tracked for 0.5s+</div>
+          </div>
+          <div v-for="ev in events" :key="ev.tracking_id" class="event-item"
+               :class="{
+                 'is-active': ev.status === 'started' && !ev.common_name,
+                 'is-identified': !!ev.common_name,
+                 'is-ended': ev.status === 'ended'
+               }">
+            <div class="thumb">
+              <img v-if="thumbnailExists(ev.tracking_id)" :src="thumbnailUrl(ev.tracking_id)" @error="onThumbError($event)" />
+              <span v-else class="ph">🐾</span>
+            </div>
+            <div class="card-body">
+              <div class="card-top">
+                <span class="status-pill" :class="ev.common_name ? 'identified' : ev.status === 'ended' ? 'ended' : 'tracking'">
+                  {{ ev.common_name ? '✓ ID' : ev.status === 'ended' ? 'Ended' : '● Live' }}
+                </span>
+                <span class="track-id">{{ shortenId(ev.tracking_id) }}</span>
+              </div>
+              <div v-if="ev.common_name" class="animal-name">{{ ev.common_name }}</div>
+              <div v-if="ev.scientific_name" class="scientific-name">{{ ev.scientific_name }}</div>
+              <div v-if="ev.description" class="card-desc">{{ ev.description }}</div>
+              <div class="card-meta">
+                <span>🕐 {{ timeAgo(ev.last_seen || ev.start_time) }}</span>
+                <span class="time-pill" v-if="ev.start_time">{{ formatTime(ev.start_time) }}</span>
+                <span class="time-pill" v-if="ev.end_time">→ {{ formatTime(ev.end_time) }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Detections -->
+        <template v-if="rightTab === 'detections'">
+          <div v-if="detections.length === 0" class="empty">
+            <div class="empty-icon">📋</div>
+            <div class="empty-text">No detections recorded</div>
+          </div>
+          <div v-for="det in detections" :key="det.id" class="det-item" @click="openDetectionModal(det)">
+            <div class="thumb">
+              <img v-if="thumbnailExists(det.tracking_id)" :src="thumbnailUrl(det.tracking_id)" @error="onThumbError($event)" />
+              <span v-else class="ph">🐾</span>
+            </div>
+            <div class="det-info">
+              <div class="det-name">{{ det.animal || 'Unknown' }}</div>
+              <div class="det-sci" v-if="det.scientific_name">{{ det.scientific_name }}</div>
+              <div class="det-bottom">
+                <span class="safety-badge" :class="isDangerous(det.is_dangerous) ? 'danger' : 'safe'">
+                  {{ isDangerous(det.is_dangerous) ? '⚠ Danger' : '✓ Safe' }}
+                </span>
+                <div class="det-meta-right">
+                  <span v-if="det.family">{{ det.family }}</span>
+                  <span>{{ shortenId(det.tracking_id) }}</span>
+                </div>
+              </div>
+              <div class="card-meta" style="margin-top:4px;">
+                <span>🕐 {{ timeAgo(det.last_seen || det.end_time || det.start_time) }}</span>
+                <span class="time-pill" v-if="det.start_time">{{ formatTime(det.start_time) }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Animals DB -->
+        <template v-if="rightTab === 'animals'">
+          <div v-if="animals.length === 0" class="empty">
+            <div class="empty-icon">🗃️</div>
+            <div class="empty-text">Species database empty</div>
+            <div class="empty-hint">Animals added when AI identifies new species</div>
+          </div>
+          <div v-else class="animals-grid">
+            <div v-for="a in animals" :key="a.id" class="animal-row">
+              <div>
+                <div class="ar-name">{{ a.animal }}</div>
+                <div class="ar-sci">{{ a.scientific_name }}</div>
+              </div>
+              <div class="ar-family">{{ a.family || '—' }}</div>
+              <span class="safety-badge" :class="isDangerous(a.is_dangerous) ? 'danger' : 'safe'">
+                {{ isDangerous(a.is_dangerous) ? '⚠' : '✓' }}
+              </span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Drawer -->
+  <div class="chat-drawer" :class="{ open: chatOpen }">
+    <div class="chat-drawer-head">
+      <span class="chat-drawer-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-warm)" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Tracker Assistant
+      </span>
+      <button type="button" class="chat-close-btn" @click="chatOpen = false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="chat-body" ref="chatMessagesRef">
+      <div v-if="chatMessages.length === 0" class="chat-empty-msg">Ask about detections, species info, or query the tracker database.</div>
+      <template v-for="(msg, idx) in chatMessages" :key="idx">
+        <div :class="['chat-bubble', msg.role === 'user' ? 'user' : 'bot']">
+          <div v-if="msg.role === 'user'">{{ msg.content }}</div>
+          <template v-else>
+            <div v-if="msg.toolCalls?.length" class="chat-tool-block">
+              <div v-for="(t, i) in msg.toolCalls" :key="i" class="chat-tool-item">
+                <span class="tool-name">{{ t.name }}</span>
+                <span v-if="t.input?.query" style="color:var(--text-muted);font-family:var(--font-mono);font-size:10px;">{{ t.input.query }}</span>
+              </div>
+            </div>
+            <div v-if="msg.content" class="chat-md" v-html="msg.html"></div>
+            <div v-else-if="chatLoading && idx === chatMessages.length - 1" class="chat-typing-dots">
+              <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+    <div class="chat-input-row">
+      <input v-model="chatInput" type="text" class="chat-input" placeholder="Ask something…"
+        @keydown.enter.exact.prevent="sendChatMessage" :disabled="chatLoading" />
+      <button type="button" class="chat-send-btn" @click="sendChatMessage" :disabled="chatLoading || !chatInput.trim()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <button type="button" class="fab" @click="chatOpen = !chatOpen">
+    <svg v-if="!chatOpen" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <svg v-else xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+
+  <!-- Detection Modal -->
+  <div v-if="detectionModalOpen" class="modal-backdrop" @click.self="closeDetectionModal">
+    <div class="modal-card" role="dialog">
+      <div class="modal-head">
+        <div class="modal-title">
+          <span>{{ detectionDetail ? (detectionDetail.animal || 'Unknown') : '…' }}</span>
+          <span v-if="detectionDetail?.scientific_name" class="sci">{{ detectionDetail.scientific_name }}</span>
+          <span v-if="detectionDetail" class="safety-badge" :class="isDangerous(detectionDetail.is_dangerous) ? 'danger' : 'safe'" style="margin-left:6px;">
+            {{ isDangerous(detectionDetail.is_dangerous) ? '⚠ Danger' : '✓ Safe' }}
+          </span>
+        </div>
+        <button type="button" class="modal-close-btn" @click="closeDetectionModal">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <template v-if="detectionModalLoading">
+          <div class="modal-loading">Loading detection…</div>
+        </template>
+        <template v-else-if="detectionDetail">
+          <div class="modal-video">
+            <img v-if="hasClipFrames(detectionDetail)" :src="videoClipUrl(detectionDetail.tracking_id)" alt="Clip" />
+            <div v-else class="modal-video-ph"><span>🎬</span><span>No clip available</span></div>
+          </div>
+          <div class="modal-sections">
+            <div v-if="detectionDetail.ai_description" class="info-block">
+              <h4>Description</h4>
+              <p class="info-desc">{{ detectionDetail.ai_description }}</p>
+            </div>
+            <div v-if="detectionDetail.safety_info || isDangerous(detectionDetail.is_dangerous)" class="info-block">
+              <h4>⚠ Safety</h4>
+              <p class="info-desc">{{ detectionDetail.safety_info || 'This animal can pose a threat to humans.' }}</p>
+            </div>
+            <div class="info-block">
+              <h4>Species</h4>
+              <div class="info-grid">
+                <div class="info-cell"><span class="lbl">Family</span><span class="val txt">{{ detectionDetail.family || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Height</span><span class="val">{{ detectionDetail.height_cm || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Weight</span><span class="val">{{ detectionDetail.weight_kg || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Color</span><span class="val txt">{{ detectionDetail.color || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Lifespan</span><span class="val">{{ detectionDetail.lifespan_years || '—' }}</span></div>
+              </div>
+            </div>
+            <div class="info-block">
+              <h4>Habitat & Diet</h4>
+              <div class="info-grid">
+                <div class="info-cell"><span class="lbl">Habitat</span><span class="val txt">{{ detectionDetail.habitat || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Diet</span><span class="val txt">{{ detectionDetail.diet || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Countries</span><span class="val txt">{{ detectionDetail.countries_found || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Predators</span><span class="val txt">{{ detectionDetail.predators || '—' }}</span></div>
+              </div>
+            </div>
+            <div class="info-block">
+              <h4>Behaviour</h4>
+              <div class="info-grid">
+                <div class="info-cell"><span class="lbl">Social</span><span class="val txt">{{ detectionDetail.social_structure || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Avg Speed</span><span class="val">{{ detectionDetail.average_speed_kmh || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Top Speed</span><span class="val">{{ detectionDetail.top_speed_kmh || '—' }}</span></div>
+                <div class="info-cell"><span class="lbl">Offspring</span><span class="val">{{ detectionDetail.offspring_per_birth || '—' }}</span></div>
+              </div>
+            </div>
+            <div class="info-block">
+              <h4>Event Timeline</h4>
+              <div class="event-time-pills">
+                <span v-if="detectionDetail.start_time">Start {{ formatTime(detectionDetail.start_time) }}</span>
+                <span v-if="detectionDetail.end_time">End {{ formatTime(detectionDetail.end_time) }}</span>
+                <span v-if="detectionDetail.last_seen">Last seen {{ formatTime(detectionDetail.last_seen) }}</span>
+              </div>
+              <div style="margin-top:8px;">
+                <span class="lbl" style="font-size:9px;color:var(--text-muted);">Tracking ID</span>
+                <div style="margin-top:3px;font-size:11px;font-family:var(--font-mono);word-break:break-all;color:var(--text-secondary);">{{ detectionDetail.tracking_id }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div v-if="settingsOpen" class="modal-backdrop" @click.self="settingsOpen = false">
+    <div class="modal-card settings-card" role="dialog">
+      <div class="modal-head">
+        <div class="modal-title">Settings</div>
+        <button type="button" class="modal-close-btn" @click="settingsOpen = false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding-top:12px;">
+        <p class="settings-hint">Changes apply immediately.</p>
+        <div class="settings-form">
+          <div class="s-row">
+            <label>Video Source</label>
+            <div class="s-video-row">
+              <select v-model="selectedVideo" @change="selectVideo">
+                <option value="">No video</option>
+                <option v-for="v in videos" :key="v.path" :value="v.path">{{ v.name }}</option>
+              </select>
+              <label class="upload-btn">
+                <input type="file" accept=".mp4,.avi,.mov,.mkv,.webm" @change="onVideoUpload" hidden />
+                📤 Upload
+              </label>
+              <span v-if="videoUploading" style="font-size:11px;color:var(--text-muted);">Uploading…</span>
+            </div>
+          </div>
+          <div class="s-row"><label>YOLO Model</label><input v-model="settingsForm.yolo_model" type="text" placeholder="best.pt" /></div>
+          <div class="s-row"><label>Confidence</label><input v-model.number="settingsForm.yolo_confidence" type="number" step="0.05" min="0" max="1" /></div>
+          <div class="s-row"><label>Stream FPS</label><input v-model.number="settingsForm.stream_fps" type="number" min="1" max="60" /></div>
+          <div class="s-row"><label>Event Start (s)</label><input v-model.number="settingsForm.event_start_threshold_s" type="number" step="0.1" min="0" /></div>
+          <div class="s-row"><label>Event End (s)</label><input v-model.number="settingsForm.event_end_threshold_s" type="number" step="0.1" min="0" /></div>
+          <div class="s-row"><label>Auto-Pause (min)</label><input v-model.number="settingsForm.auto_pause_minutes" type="number" min="1" max="120" /></div>
+          <div class="s-row s-row-check"><label><input v-model="settingsForm.loop_video" type="checkbox" /> Loop video</label></div>
+        </div>
+        <div class="settings-footer">
+          <button type="button" class="btn-primary" @click="saveSettings" :disabled="settingsSaving">Save</button>
+          <span v-if="settingsMessage" class="save-msg">{{ settingsMessage }}</span>
+          <button type="button" class="btn-reset" @click="resetDb" :disabled="resetDbLoading" title="Delete all events, detections, and animals">Reset DB</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  if (typeof marked !== 'undefined') {
+    marked.setOptions({
+      highlight: function(code, lang) {
+        if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) return hljs.highlight(code, { language: lang }).value;
+        if (typeof hljs !== 'undefined') return hljs.highlightAuto(code).value;
+        return code;
+      }
+    });
+  }
+})();
+
+const { createApp, ref, reactive, onMounted, onUnmounted, nextTick, watch } = Vue;
+
+createApp({
+  setup() {
+    const wsBase = `ws://${location.host}`;
+    const apiBase = `${location.origin}`;
+    const streamUrl = ref(`${apiBase}/stream`);
+    const streamActive = ref(true);
+    const rightTab = ref('events');
+    const chatOpen = ref(false);
+    const settingsOpen = ref(false);
+    const chatMessages = ref([]);
+    const chatInput = ref('');
+    const chatLoading = ref(false);
+    const chatThreadId = ref('default');
+    const chatMessagesRef = ref(null);
+    const tick = ref(Date.now());
+
+    const status = reactive({ tracker_running: false, video_finished: false, frame_count: 0, fps: 0, active_tracks: 0 });
+    const events = ref([]);
+    const detections = ref([]);
+    const animals = ref([]);
+    const detectionModalOpen = ref(false);
+    const detectionDetail = ref(null);
+    const detectionModalLoading = ref(false);
+    const videos = ref([]);
+    const selectedVideo = ref('');
+    const videoUploading = ref(false);
+    const settingsForm = reactive({ video_path:'', yolo_model:'', yolo_confidence:0.4, stream_fps:24, event_start_threshold_s:1.5, event_end_threshold_s:2.5, auto_pause_minutes:10, loop_video:true });
+    const settingsSaving = ref(false);
+    const settingsMessage = ref('');
+    const resetDbLoading = ref(false);
+    let eventWs = null, statusInterval = null, dataInterval = null, tickInterval = null;
+
+    function thumbnailUrl(id) { return id ? `${apiBase}/thumbnails/${id}.jpg` : ''; }
+    function thumbnailExists(id) { return !!id; }
+    function onThumbError(e) { e.target.style.display='none'; if(e.target.nextElementSibling) e.target.nextElementSibling.style.display=''; }
+
+    function timeAgo(iso) {
+      if(!iso) return '—';
+      const _ = tick.value;
+      const diff = Date.now() - new Date(iso).getTime();
+      if(diff<0) return 'just now';
+      const s=Math.floor(diff/1000);
+      if(s<5) return 'just now';
+      if(s<60) return `${s}s ago`;
+      const m=Math.floor(s/60);
+      if(m<60) return `${m}m ago`;
+      const h=Math.floor(m/60);
+      if(h<24) return `${h}h ago`;
+      return `${Math.floor(h/24)}d ago`;
+    }
+
+    function formatTime(iso) {
+      if(!iso) return '';
+      try { return new Date(iso).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); } catch { return iso; }
+    }
+
+    function connectEventWs() {
+      eventWs = new WebSocket(`${wsBase}/ws/events`);
+      eventWs.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if(data==='pong') return;
+        if(data.type==='init') { data.events.forEach(ev=>{ ev.status=ev.end_time?'ended':'started'; upsertEvent(ev); }); return; }
+        upsertEvent(data);
+      };
+      eventWs.onclose = () => setTimeout(connectEventWs, 3000);
+      eventWs.onerror = () => eventWs.close();
+      const ping = setInterval(()=>{ if(eventWs.readyState===WebSocket.OPEN) eventWs.send('ping'); else clearInterval(ping); },15000);
+    }
+
+    function upsertEvent(data) {
+      const idx = events.value.findIndex(e=>e.tracking_id===data.tracking_id);
+      if(idx>=0) Object.assign(events.value[idx],data);
+      else events.value.unshift(data);
+      if(events.value.length>200) events.value.splice(200);
+    }
+
+    async function fetchStatus() { try { const r=await fetch(`${apiBase}/api/status`); Object.assign(status,await r.json()); } catch{} }
+    async function fetchData() { try { const[d,a]=await Promise.all([fetch(`${apiBase}/api/detections?limit=200`),fetch(`${apiBase}/api/animals`)]); detections.value=await d.json(); animals.value=await a.json(); } catch{} }
+
+    function shortenId(id) { return id ? id.replace('tracking_','').substring(0,8)+'…' : '—'; }
+    function isDangerous(v) { if(v===true||v===1) return true; if(typeof v==='string'&&/^(true|1|yes)$/i.test(v.trim())) return true; return false; }
+    function onStreamError() { streamActive.value=false; setTimeout(()=>{ streamActive.value=true; },3000); }
+    async function fetchVideos() { try { videos.value=await(await fetch(`${apiBase}/api/videos`)).json(); } catch{} }
+    async function selectVideo() { if(!selectedVideo.value) return; try { const r=await fetch(`${apiBase}/api/config/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_path:selectedVideo.value})}); if(r.ok) fetchStatus(); } catch{} }
+    async function onVideoUpload(e) { const f=e.target?.files?.[0]; if(!f) return; videoUploading.value=true; e.target.value=''; try { const fd=new FormData(); fd.append('file',f); const r=await(await fetch(`${apiBase}/api/videos/upload`,{method:'POST',body:fd})).json(); if(r.ok){await fetchVideos();selectedVideo.value=r.path;} } catch{} videoUploading.value=false; }
+    async function loadSettings() { try { const d=await(await fetch(`${apiBase}/api/config`)).json(); Object.assign(settingsForm,{video_path:d.video_path||'',yolo_model:d.yolo_model||'',yolo_confidence:d.yolo_confidence??0.4,stream_fps:d.stream_fps??24,event_start_threshold_s:d.event_start_threshold_s??1.5,event_end_threshold_s:d.event_end_threshold_s??2.5,auto_pause_minutes:d.auto_pause_minutes??10,loop_video:d.loop_video??true}); } catch{} }
+    async function saveSettings() { settingsSaving.value=true; settingsMessage.value=''; try { const body={}; for(const k of Object.keys(settingsForm)) if(settingsForm[k]!==undefined) body[k]=settingsForm[k]; const r=await(await fetch(`${apiBase}/api/config/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(); settingsMessage.value=r.message||'Saved'; setTimeout(()=>{settingsMessage.value='';},3000); } catch{ settingsMessage.value='Failed'; } settingsSaving.value=false; }
+    async function resetDb() { if(!confirm('Reset database? This will delete all events, detections, and animals.')) return; resetDbLoading.value=true; settingsMessage.value=''; try { const r=await(await fetch(`${apiBase}/api/db/reset`,{method:'POST'})).json(); if(r.ok){ events.value=[]; fetchData(); settingsMessage.value='Database reset.'; setTimeout(()=>{settingsMessage.value='';},3000); } else throw 0; } catch{ settingsMessage.value='Reset failed'; } resetDbLoading.value=false; }
+    async function toggleTracking() { try { const ep=status.tracker_running?'/api/tracker/pause':'/api/tracker/start'; const r=await(await fetch(`${apiBase}${ep}`,{method:'POST'})).json(); if(r.ok) fetchStatus(); } catch{} }
+
+    watch(settingsOpen,(o)=>{ if(o){fetchVideos();loadSettings();} });
+    watch(()=>settingsForm.video_path,(p)=>{selectedVideo.value=p||'';});
+    watch(selectedVideo,(p)=>{settingsForm.video_path=p||'';});
+
+    function hasClipFrames(d) { return d&&d.start_frame!=null&&d.end_frame!=null&&d.end_frame>=d.start_frame; }
+    function videoClipUrl(id) { return id?`${apiBase}/api/video/${encodeURIComponent(id)}`:''; }
+
+    async function openDetectionModal(det) {
+      if(!det?.tracking_id) return;
+      detectionModalOpen.value=true; detectionDetail.value=null; detectionModalLoading.value=true;
+      try { const r=await fetch(`${apiBase}/api/detections/${encodeURIComponent(det.tracking_id)}`); if(!r.ok) throw 0; detectionDetail.value=await r.json(); } catch{ detectionDetail.value=null; }
+      detectionModalLoading.value=false;
+    }
+
+    function closeDetectionModal() { detectionModalOpen.value=false; detectionDetail.value=null; }
+
+    function onKeydown(e) { if(e.key==='Escape'){ if(detectionModalOpen.value) closeDetectionModal(); else if(settingsOpen.value) settingsOpen.value=false; } }
+
+    function scrollChat() { nextTick(()=>{ const el=chatMessagesRef.value; if(el) el.scrollTop=el.scrollHeight; }); }
+
+    async function sendChatMessage() {
+      const text=chatInput.value.trim(); if(!text||chatLoading.value) return;
+      chatInput.value='';
+      chatMessages.value.push({role:'user',content:text});
+      const bi=chatMessages.value.length;
+      chatMessages.value.push({role:'bot',content:'',html:'',toolCalls:[]});
+      chatLoading.value=true; scrollChat();
+      let raw=''; const tc=[];
+      try {
+        const res=await fetch(`${apiBase}/api/chat`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,thread_id:chatThreadId.value,model_id:null})});
+        if(!res.ok) throw new Error(res.statusText||'Failed');
+        const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';
+        while(true) { const{done,value}=await reader.read(); if(done) break; buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
+          for(const ln of lines) { if(!ln.trim()) continue; try { const ev=JSON.parse(ln);
+            if(ev.type==='chunk'&&ev.content){ raw+=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;} scrollChat(); }
+            else if(ev.type==='tool_start'){ tc.push({name:ev.name||'',input:ev.input||{}}); const m=chatMessages.value[bi]; if(m) m.toolCalls=[...tc]; scrollChat(); }
+            else if(ev.type==='tool_end') scrollChat();
+            else if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;if(tc.length)m.toolCalls=[...tc];} scrollChat(); }
+          } catch{} } }
+        if(buf.trim()){ try { const ev=JSON.parse(buf); if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;} } } catch{} }
+        const m=chatMessages.value[bi]; if(m&&!m.html&&m.content) m.html=typeof marked!=='undefined'?marked.parse(m.content):m.content;
+      } catch(err) { const m=chatMessages.value[bi]; if(m){m.content='Error: '+(err.message||'Failed');m.html=m.content;} }
+      chatLoading.value=false; scrollChat();
+    }
+
+    onMounted(async()=>{
+      connectEventWs(); fetchStatus(); fetchData(); await fetchVideos();
+      try { const d=await(await fetch(`${apiBase}/api/config`)).json(); selectedVideo.value=d.video_path||''; } catch{}
+      statusInterval=setInterval(fetchStatus,2000);
+      dataInterval=setInterval(fetchData,5000);
+      tickInterval=setInterval(()=>{tick.value=Date.now();},5000);
+      window.addEventListener('keydown',onKeydown);
+    });
+
+    onUnmounted(()=>{
+      window.removeEventListener('keydown',onKeydown);
+      if(eventWs) eventWs.close();
+      clearInterval(statusInterval); clearInterval(dataInterval); clearInterval(tickInterval);
+    });
+
+    return {
+      streamUrl, streamActive, rightTab, videos, selectedVideo, videoUploading, selectVideo, onVideoUpload,
+      status, events, detections, animals, shortenId, isDangerous, onStreamError,
+      thumbnailUrl, thumbnailExists, onThumbError, timeAgo, formatTime,
+      chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, sendChatMessage,
+      settingsOpen, settingsForm, settingsSaving, settingsMessage, resetDbLoading, loadSettings, saveSettings, resetDb, toggleTracking,
+      detectionModalOpen, detectionDetail, detectionModalLoading, openDetectionModal, closeDetectionModal, videoClipUrl, hasClipFrames,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

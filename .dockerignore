@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+*.egg-info
+.eggs
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+build
+dist
+*.egg
+
+# IDE and OS
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Database and generated files (fresh start in container)
+*.db
+*.db-shm
+*.db-wal
+backend/thumbnails/*
+!backend/thumbnails/.gitkeep
+
+# Large model files (mount or download at runtime)
+*.pt
+
+# Videos (mount or upload at runtime)
+*.mp4
+*.avi
+*.mov
+backend/input_videos/*
+!backend/input_videos/.gitkeep
+
+# Logs and temp
+*.log
+tmp
+temp
+.cache
+
+# Node (if any)
+node_modules
+.pnpm-store

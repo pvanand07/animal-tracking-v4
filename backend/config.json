@@ -1,0 +1,10 @@
+{
+  "video_path": "input_videos/video.mp4",
+  "yolo_model": "best.pt",
+  "yolo_confidence": 0.4,
+  "stream_fps": 24,
+  "loop_video": true,
+  "event_start_threshold_s": 1.0,
+  "event_end_threshold_s": 2.5,
+  "auto_pause_minutes": 5
+}

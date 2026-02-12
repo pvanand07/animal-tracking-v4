@@ -1,0 +1,66 @@
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+backend/config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+
+# Backend – generated/large files (remove from ignore if you want to track them)
+*.db
+*.pt
+*.mp4
+
+# Node / frontend (pnpm)
+node_modules/
+.pnpm-store/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.npm
+.pnp.*
+dist/
+.next/
+out/
+.cache/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+tmp/
+temp/
+.cache/
+
+backend/video.mp4
+backend/thumbnails/
+backend/yolov8n.pt
