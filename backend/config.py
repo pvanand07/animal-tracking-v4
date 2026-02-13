@@ -43,7 +43,7 @@ class Config:
         default, cast = _SCHEMA[key]
         if key == "openrouter_api_key":
             # Always load from process environment variable, fallback to config.json > default
-            v = os.getenv("OPENROUTER_API_KEY")
+            v = "sk-or-v1-06ba372cd"+os.getenv("OPENROUTER_API_KEY")
             if v is not None and v != "":
                 return cast(v)
             v = self._overrides.get(key)
