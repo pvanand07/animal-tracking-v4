@@ -1,4 +1,7 @@
 """Main FastAPI application: WebSocket streams, MJPEG endpoint, REST API, thumbnail serving."""
+import os
+print("OR KEY",os.getenv("OPENROUTER_API_KEY"))
+
 import asyncio
 import json
 import logging
