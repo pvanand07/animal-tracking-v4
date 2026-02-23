@@ -64,3 +64,7 @@ temp/
 backend/video.mp4
 backend/thumbnails/
 backend/yolov8n.pt
+backend/animal_tracker.db
+backend/animal_tracker.db
+backend/animal_tracker.db-shm
+backend/input_videos/video.mp4

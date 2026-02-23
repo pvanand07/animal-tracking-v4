@@ -1,6 +1,17 @@
 """Main FastAPI application: WebSocket streams, MJPEG endpoint, REST API, thumbnail serving."""
+# Set LD_LIBRARY_PATH for TensorRT/cuDNN before any ultralytics import (required for .engine on Jetson)
 import os
-print("OR KEY",os.getenv("OPENROUTER_API_KEY"))
+_cudnn_paths = [
+    "/usr/lib/aarch64-linux-gnu",
+    "/usr/local/cuda/lib64",
+    "/usr/lib",
+]
+_ld = os.environ.get("LD_LIBRARY_PATH", "")
+_extra = ":".join(p for p in _cudnn_paths if os.path.isdir(p) and p not in _ld)
+if _extra:
+    os.environ["LD_LIBRARY_PATH"] = _extra + (":" + _ld if _ld else "")
+
+print("OR KEY", os.getenv("OPENROUTER_API_KEY"))
 
 import asyncio
 import json
@@ -322,6 +333,9 @@ class ConfigUpdate(BaseModel):
     yolo_model: Optional[str] = None
     yolo_confidence: Optional[float] = None
     stream_fps: Optional[int] = None
+    inference_imgsz: Optional[int] = None
+    inference_half: Optional[bool] = None
+    inference_interval: Optional[int] = None
     loop_video: Optional[bool] = None
     event_start_threshold_s: Optional[float] = None
     event_end_threshold_s: Optional[float] = None

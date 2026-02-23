@@ -1,4 +1,5 @@
 """YOLO Tracker: reads video, runs object tracking, annotates frames."""
+import re
 import time
 import logging
 import threading
@@ -11,6 +12,14 @@ from event_manager import EventManager
 log = logging.getLogger("tracker")
 
 
+def _engine_imgsz_from_path(path: str) -> int:
+    """Infer imgsz from engine filename, e.g. yolo26n-480.engine -> 480; else 640."""
+    if not path.lower().endswith(".engine"):
+        return config.inference_imgsz
+    match = re.search(r"-(\d+)\.engine$", path, re.IGNORECASE)
+    return int(match.group(1)) if match else 640
+
+
 class Tracker:
     """
     Reads video.mp4, runs YOLO BoTSORT tracking, and:
@@ -20,7 +29,7 @@ class Tracker:
 
     def __init__(self, event_manager: EventManager):
         self.event_manager = event_manager
-        self.model = YOLO(config.yolo_model)
+        self.model = YOLO(config.yolo_model_path)
         self.running = False
         self._thread: threading.Thread | None = None
         self._latest_frame: bytes | None = None
@@ -29,6 +38,8 @@ class Tracker:
         self.frame_count = 0
         self.fps = 0.0
         self.video_finished = False
+        self._last_detections: list = []
+        self._last_annotated: bytes | None = None
 
     @property
     def latest_frame(self) -> bytes | None:
@@ -73,62 +84,82 @@ class Tracker:
                     break
 
                 loop_start = time.monotonic()
-
-                # Run YOLO tracking
-                results = self.model.track(
-                    frame,
-                    persist=True,
-                    conf=config.yolo_confidence,
-                    verbose=False,
-                    tracker=config.tracker_config,
+                run_inference = (
+                    self.frame_count % config.inference_interval == 0
+                    or self._last_annotated is None
                 )
 
-                # Extract detections
-                detections = []
-                annotated = frame.copy()
+                if run_inference:
+                    # TensorRT .engine models use a fixed input size; infer from filename (e.g. yolo26n-480.engine) or default 640
+                    model_path = config.yolo_model_path
+                    imgsz = _engine_imgsz_from_path(model_path) if model_path.lower().endswith(".engine") else config.inference_imgsz
+                    # Run YOLO tracking (main GPU load)
+                    results = self.model.track(
+                        frame,
+                        persist=True,
+                        conf=config.yolo_confidence,
+                        verbose=False,
+                        tracker=config.tracker_config,
+                        imgsz=imgsz,
+                        half=config.inference_half,
+                    )
 
-                if results and results[0].boxes is not None and results[0].boxes.id is not None:
-                    boxes = results[0].boxes
-                    for i in range(len(boxes)):
-                        track_id = int(boxes.id[i].item())
-                        bbox = boxes.xyxy[i].cpu().numpy().tolist()
-                        conf = float(boxes.conf[i].item())
-                        cls_id = int(boxes.cls[i].item())
-                        cls_name = self.model.names.get(cls_id, "unknown")
+                    # Extract detections
+                    detections = []
+                    annotated = frame.copy()
 
-                        detections.append({
-                            "track_id": track_id,
-                            "bbox": bbox,
-                            "class_name": cls_name,
-                            "confidence": conf,
-                        })
+                    if results and results[0].boxes is not None and results[0].boxes.id is not None:
+                        boxes = results[0].boxes
+                        for i in range(len(boxes)):
+                            track_id = int(boxes.id[i].item())
+                            bbox = boxes.xyxy[i].cpu().numpy().tolist()
+                            conf = float(boxes.conf[i].item())
+                            cls_id = int(boxes.cls[i].item())
+                            cls_name = self.model.names.get(cls_id, "unknown")
 
-                        # Annotate frame
-                        x1, y1, x2, y2 = [int(v) for v in bbox]
-                        color = self._track_color(track_id)
-                        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-                        label = f"#{track_id} {cls_name} {conf:.2f}"
-                        self._draw_label(annotated, label, x1, y1 - 8, color)
+                            detections.append({
+                                "track_id": track_id,
+                                "bbox": bbox,
+                                "class_name": cls_name,
+                                "confidence": conf,
+                            })
 
-                # Draw FPS overlay
-                cv2.putText(
-                    annotated,
-                    f"FPS: {self.fps:.1f} | Tracks: {len(detections)}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.8,
-                    (0, 255, 200),
-                    2,
-                )
+                            # Annotate frame
+                            x1, y1, x2, y2 = [int(v) for v in bbox]
+                            color = self._track_color(track_id)
+                            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+                            label = f"#{track_id} {cls_name} {conf:.2f}"
+                            self._draw_label(annotated, label, x1, y1 - 8, color)
 
-                # Feed detections to event manager with real monotonic time and frame number
-                self.event_manager.update(detections, frame, loop_start, self.frame_count)
+                    self._last_detections = detections
 
-                # Encode annotated frame as JPEG
-                _, jpeg = cv2.imencode(
-                    ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 75]
-                )
-                frame_bytes = jpeg.tobytes()
+                    # Draw FPS overlay
+                    cv2.putText(
+                        annotated,
+                        f"FPS: {self.fps:.1f} | Tracks: {len(detections)}",
+                        (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 200),
+                        2,
+                    )
+
+                    # Encode annotated frame as JPEG
+                    _, jpeg = cv2.imencode(
+                        ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 75]
+                    )
+                    frame_bytes = jpeg.tobytes()
+                    self._last_annotated = frame_bytes
+
+                    self.event_manager.update(
+                        detections, frame, loop_start, self.frame_count, skip_crop_update=False
+                    )
+                else:
+                    # Reuse last inference result (no YOLO run — reduces load)
+                    frame_bytes = self._last_annotated
+                    self.event_manager.update(
+                        self._last_detections, frame, loop_start, self.frame_count, skip_crop_update=True
+                    )
 
                 with self._frame_lock:
                     self._latest_frame = frame_bytes
@@ -152,7 +183,7 @@ class Tracker:
                 break
             else:
                 log.info("Looping video...")
-                self.model = YOLO(config.yolo_model)
+                self.model = YOLO(config.yolo_model_path)
 
     @staticmethod
     def _track_color(track_id: int) -> tuple:

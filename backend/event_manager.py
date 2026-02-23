@@ -60,12 +60,13 @@ class EventManager:
         self._lock = threading.Lock()
         self.on_event_update = None  # callback: (event_dict) -> None
 
-    def update(self, detections: list[dict], frame: np.ndarray, mono_time: float, frame_number: int | None = None):
+    def update(self, detections: list[dict], frame: np.ndarray, mono_time: float, frame_number: int | None = None, skip_crop_update: bool = False):
         """
         Called each frame with list of detections:
         [{"track_id": int, "bbox": [x1,y1,x2,y2], "class_name": str, "confidence": float}, ...]
         mono_time: time.monotonic() value for duration/absence calculations.
         frame_number: video frame index (0-based) for this frame.
+        skip_crop_update: if True, only update last_seen (no crop/thumbnail updates); use when reusing previous detections.
         """
         now = mono_time
         now_dt = now_iso()
@@ -96,34 +97,37 @@ class EventManager:
 
                 obj = self._tracks[tid]
 
-                # Keep the largest crop for best AI identification + thumbnail
-                x1, y1, x2, y2 = [int(v) for v in bbox]
-                area = (x2 - x1) * (y2 - y1)
-                if frame is not None and area > obj.best_crop_area:
-                    h, w = frame.shape[:2]
-                    pad = 20
-                    cx1 = max(0, x1 - pad)
-                    cy1 = max(0, y1 - pad)
-                    cx2 = min(w, x2 + pad)
-                    cy2 = min(h, y2 + pad)
-                    crop = frame[cy1:cy2, cx1:cx2]
-                    if crop.size > 0:
-                        obj.best_crop = crop.copy()
-                        obj.best_crop_area = area
-                        # Re-save thumbnail with better crop
-                        if obj.event_started:
-                            self._save_thumbnail(obj)
+                # Keep the largest crop for best AI identification + thumbnail (skip when reusing detections from another frame)
+                if not skip_crop_update:
+                    x1, y1, x2, y2 = [int(v) for v in bbox]
+                    area = (x2 - x1) * (y2 - y1)
+                    if frame is not None and area > obj.best_crop_area:
+                        h, w = frame.shape[:2]
+                        pad = 20
+                        cx1 = max(0, x1 - pad)
+                        cy1 = max(0, y1 - pad)
+                        cx2 = min(w, x2 + pad)
+                        cy2 = min(h, y2 + pad)
+                        crop = frame[cy1:cy2, cx1:cx2]
+                        if crop.size > 0:
+                            obj.best_crop = crop.copy()
+                            obj.best_crop_area = area
+                            # Re-save thumbnail with better crop
+                            if obj.event_started:
+                                self._save_thumbnail(obj)
 
-                # Initial crop capture for new tracks
-                if obj.best_crop is None and frame is not None:
-                    h, w = frame.shape[:2]
-                    pad = 20
-                    cx1, cy1 = max(0, x1 - pad), max(0, y1 - pad)
-                    cx2, cy2 = min(w, x2 + pad), min(h, y2 + pad)
-                    crop = frame[cy1:cy2, cx1:cx2]
-                    if crop.size > 0:
-                        obj.best_crop = crop.copy()
-                        obj.best_crop_area = area
+                    # Initial crop capture for new tracks
+                    if obj.best_crop is None and frame is not None:
+                        x1, y1, x2, y2 = [int(v) for v in bbox]
+                        area = (x2 - x1) * (y2 - y1)
+                        h, w = frame.shape[:2]
+                        pad = 20
+                        cx1, cy1 = max(0, x1 - pad), max(0, y1 - pad)
+                        cx2, cy2 = min(w, x2 + pad), min(h, y2 + pad)
+                        crop = frame[cy1:cy2, cx1:cx2]
+                        if crop.size > 0:
+                            obj.best_crop = crop.copy()
+                            obj.best_crop_area = area
 
         # Check thresholds
         with self._lock:
