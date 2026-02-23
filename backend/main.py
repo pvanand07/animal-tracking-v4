@@ -11,7 +11,6 @@ _extra = ":".join(p for p in _cudnn_paths if os.path.isdir(p) and p not in _ld)
 if _extra:
     os.environ["LD_LIBRARY_PATH"] = _extra + (":" + _ld if _ld else "")
 
-print("OR KEY", os.getenv("OPENROUTER_API_KEY"))
 
 import asyncio
 import json
@@ -453,40 +452,12 @@ async def api_tracker_pause():
     return {"ok": True, "message": "Tracking paused."}
 
 
-# ── Agent API (schema, docs, read-only SQL) ──────────────────────
-
-AGENT_DOCS = """
-# Animal Tracker API – Agent reference
-
-## Schema & data
-GET /api/agent/schema  →  Database schema and this doc as plain text (Content-Type: text/plain).
-
-## Read-only SQL
-POST /api/agent/query
-Body: {"query": "SELECT ..."}
-Only SELECT is allowed. Returns JSON: {"ok": true, "rows": [...]} or {"ok": false, "error": "..."}.
-
-## REST endpoints
-GET  /api/detections?limit=200     →  All detections (joined with animals, events, ai_detections)
-GET  /api/detections/{tracking_id} →  Single detection by tracking_id
-GET  /api/animals                  →  All animals
-GET  /api/events?limit=100         →  All events (with ai_detections)
-GET  /api/events/active            →  Active events (end_time IS NULL)
-GET  /api/status                   →  Tracker status (running, fps, active_tracks, etc.)
-GET  /api/video/{tracking_id}      →  MJPEG clip for that event (start_frame..end_frame)
-
-## Streams
-GET  /stream       →  MJPEG video stream
-WS   /ws/frames    →  Raw JPEG frames
-WS   /ws/events    →  Live event updates (JSON); send "ping" for "pong"
-"""
-
+# ── Agent API (DB schema, read-only SQL) ──────────────────────────
 
 @app.get("/api/agent/schema", response_class=PlainTextResponse)
 def api_agent_schema():
-    """Return database schema and API docs as plain text for AI agents."""
-    schema = get_schema_txt()
-    return schema + "\n\n" + AGENT_DOCS.strip()
+    """Return database schema as plain text for AI agents (tables, columns, indexes)."""
+    return get_schema_txt()
 
 
 class QueryRequest(BaseModel):

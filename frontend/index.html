@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -202,7 +203,7 @@
     .main-grid {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 380px;
+      grid-template-columns: 1fr 520px;
       grid-template-rows: 1fr;
       gap: 1px;
       overflow: hidden;
@@ -367,7 +368,7 @@
       background: transparent;
       color: var(--text-muted);
       font-family: var(--font-main);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       border-radius: var(--radius-sm);
@@ -394,8 +395,9 @@
     .sidebar-content {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
+      padding: 14px;
       min-height: 0;
+      font-size: 14px;
     }
 
     .sidebar-content::-webkit-scrollbar { width: 4px; }
@@ -458,7 +460,7 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -472,28 +474,28 @@
 
     .track-id {
       font-family: var(--font-mono);
-      font-size: 9px;
+      font-size: 11px;
       color: var(--text-muted);
     }
 
     .animal-name {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 600;
       color: var(--text-primary);
       line-height: 1.2;
     }
 
     .scientific-name {
-      font-size: 10px;
+      font-size: 12px;
       font-style: italic;
       color: var(--accent-warm);
       opacity: 0.8;
     }
 
     .card-desc {
-      font-size: 11px;
+      font-size: 13px;
       color: var(--text-secondary);
-      line-height: 1.4;
+      line-height: 1.45;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -504,7 +506,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 10px;
+      font-size: 12px;
       color: var(--text-muted);
       font-family: var(--font-mono);
       margin-top: 2px;
@@ -537,8 +539,8 @@
 
     .det-info { flex: 1; min-width: 0; }
 
-    .det-name { font-size: 14px; font-weight: 600; }
-    .det-sci { font-size: 10px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
+    .det-name { font-size: 16px; font-weight: 600; }
+    .det-sci { font-size: 12px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
 
     .det-bottom {
       display: flex;
@@ -553,7 +555,7 @@
       gap: 4px;
       padding: 3px 10px;
       border-radius: 100px;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -563,7 +565,7 @@
     .safety-badge.danger { background: var(--accent-red-dim); color: var(--accent-red); }
 
     .det-meta-right {
-      font-size: 10px;
+      font-size: 12px;
       font-family: var(--font-mono);
       color: var(--text-muted);
       text-align: right;
@@ -609,15 +611,15 @@
       border-radius: var(--radius-sm);
       background: var(--bg-glass);
       border: 1px solid var(--border-subtle);
-      font-size: 12px;
+      font-size: 14px;
       align-items: center;
     }
 
     .animal-row:hover { background: var(--bg-glass-hover); }
 
     .animal-row .ar-name { font-weight: 600; color: var(--text-primary); }
-    .animal-row .ar-sci { font-size: 10px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
-    .animal-row .ar-family { color: var(--text-secondary); font-size: 11px; }
+    .animal-row .ar-sci { font-size: 12px; font-style: italic; color: var(--accent-warm); opacity: 0.7; }
+    .animal-row .ar-family { color: var(--text-secondary); font-size: 13px; }
 
     /* ── Empty State ──────────────────────── */
     .empty {
@@ -643,14 +645,14 @@
       opacity: 0.3;
     }
 
-    .empty-text { font-size: 13px; font-weight: 500; }
-    .empty-hint { font-size: 11px; }
+    .empty-text { font-size: 14px; font-weight: 500; }
+    .empty-hint { font-size: 13px; }
 
     /* ── Chat Drawer ──────────────────────── */
     .chat-drawer {
       position: fixed;
       top: 0; right: 0;
-      width: 400px;
+      width: 520px;
       max-width: 100%;
       height: 100vh;
       background: var(--bg-surface);
@@ -675,7 +677,7 @@
     }
 
     .chat-drawer-title {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--text-primary);
       display: flex;
@@ -701,26 +703,27 @@
     .chat-body {
       flex: 1;
       overflow-y: auto;
-      padding: 12px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      font-size: 15px;
     }
 
     .chat-empty-msg {
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 14px;
       text-align: center;
       padding: 32px 16px;
       line-height: 1.6;
     }
 
     .chat-bubble {
-      max-width: 88%;
-      padding: 10px 14px;
+      max-width: 92%;
+      padding: 12px 16px;
       border-radius: var(--radius-md);
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 15px;
+      line-height: 1.55;
     }
 
     .chat-bubble.user {
@@ -741,23 +744,42 @@
     .chat-bubble .chat-md p { margin: 0 0 6px; }
     .chat-bubble .chat-md p:last-child { margin-bottom: 0; }
     .chat-bubble .chat-md pre {
-      margin: 6px 0;
-      padding: 8px;
+      margin: 8px 0;
+      padding: 10px;
       border-radius: var(--radius-xs);
       background: var(--bg-base);
       border: 1px solid var(--border-subtle);
       overflow-x: auto;
-      font-size: 11px;
+      font-size: 13px;
       font-family: var(--font-mono);
     }
     .chat-bubble .chat-md code {
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 13px;
       background: var(--bg-base);
-      padding: 1px 5px;
+      padding: 2px 6px;
       border-radius: 3px;
     }
     .chat-bubble .chat-md pre code { padding: 0; background: none; }
+
+    .chat-view-detection {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin: 2px 4px 2px 0;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-family: var(--font-sans);
+      color: var(--accent-teal);
+      background: var(--bg-base);
+      border: 1px solid var(--accent-teal);
+      border-radius: var(--radius-xs);
+      cursor: pointer;
+    }
+    .chat-view-detection:hover {
+      background: var(--accent-teal);
+      color: var(--bg-app);
+    }
 
     .chat-tool-block {
       padding: 4px 0 6px;
@@ -769,7 +791,7 @@
       display: flex;
       gap: 6px;
       align-items: center;
-      font-size: 10px;
+      font-size: 12px;
       color: var(--text-muted);
     }
 
@@ -809,13 +831,13 @@
 
     .chat-input {
       flex: 1;
-      padding: 10px 14px;
+      padding: 12px 16px;
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
       background: var(--bg-base);
       color: var(--text-primary);
       font-family: var(--font-main);
-      font-size: 13px;
+      font-size: 15px;
       outline: none;
       transition: border-color 0.2s ease;
     }
@@ -839,6 +861,21 @@
 
     .chat-send-btn:hover:not(:disabled) { filter: brightness(1.1); }
     .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .chat-reset-btn {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-base);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-reset-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .chat-reset-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
     /* ── FAB ───────────────────────────────── */
     .fab {
@@ -1508,7 +1545,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
-    <div class="chat-body" ref="chatMessagesRef">
+    <div class="chat-body" ref="chatMessagesRef" @click="onChatBodyClick">
       <div v-if="chatMessages.length === 0" class="chat-empty-msg">Ask about detections, species info, or query the tracker database.</div>
       <template v-for="(msg, idx) in chatMessages" :key="idx">
         <div :class="['chat-bubble', msg.role === 'user' ? 'user' : 'bot']">
@@ -1517,7 +1554,7 @@
             <div v-if="msg.toolCalls?.length" class="chat-tool-block">
               <div v-for="(t, i) in msg.toolCalls" :key="i" class="chat-tool-item">
                 <span class="tool-name">{{ t.name }}</span>
-                <span v-if="t.input?.query" style="color:var(--text-muted);font-family:var(--font-mono);font-size:10px;">{{ t.input.query }}</span>
+                <span v-if="t.input?.query" style="color:var(--text-muted);font-family:var(--font-mono);font-size:12px;">{{ t.input.query }}</span>
               </div>
             </div>
             <div v-if="msg.content" class="chat-md" v-html="msg.html"></div>
@@ -1531,6 +1568,9 @@
     <div class="chat-input-row">
       <input v-model="chatInput" type="text" class="chat-input" placeholder="Ask something…"
         @keydown.enter.exact.prevent="sendChatMessage" :disabled="chatLoading" />
+      <button type="button" class="chat-reset-btn" @click="resetChat" :disabled="chatLoading" title="Clear chat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      </button>
       <button type="button" class="chat-send-btn" @click="sendChatMessage" :disabled="chatLoading || !chatInput.trim()">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
@@ -1773,7 +1813,10 @@ createApp({
     const chatMessages = ref([]);
     const chatInput = ref('');
     const chatLoading = ref(false);
-    const chatThreadId = ref('default');
+    function newThreadId() {
+      return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 3 | 8); return v.toString(16); });
+    }
+    const chatThreadId = ref(newThreadId());
     const chatMessagesRef = ref(null);
     const videoPlayerRef = ref(null);
     const tick = ref(Date.now());
@@ -1901,6 +1944,27 @@ createApp({
 
     function scrollChat() { nextTick(()=>{ const el=chatMessagesRef.value; if(el) el.scrollTop=el.scrollHeight; }); }
 
+    function chatHtmlWithDetectionButtons(html) {
+      if(!html||typeof html!=='string') return html||'';
+      return html.replace(/<tracking_id>([^<]*)<\/tracking_id>/gi, (_, id) => {
+        const esc = String(id).trim().replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<button type="button" class="chat-view-detection" data-tracking-id="${esc}">▶ View</button>`;
+      });
+    }
+
+    function onChatBodyClick(e) {
+      const btn = e.target?.closest?.('.chat-view-detection');
+      if(!btn) return;
+      const id = btn.getAttribute('data-tracking-id');
+      if(id) openDetectionModal({ tracking_id: id });
+    }
+
+    function resetChat() {
+      if(chatLoading.value) return;
+      chatMessages.value = [];
+      chatThreadId.value = newThreadId();
+    }
+
     async function sendChatMessage() {
       const text=chatInput.value.trim(); if(!text||chatLoading.value) return;
       chatInput.value='';
@@ -1915,13 +1979,13 @@ createApp({
         const reader=res.body.getReader(); const dec=new TextDecoder(); let buf='';
         while(true) { const{done,value}=await reader.read(); if(done) break; buf+=dec.decode(value,{stream:true}); const lines=buf.split('\n'); buf=lines.pop()||'';
           for(const ln of lines) { if(!ln.trim()) continue; try { const ev=JSON.parse(ln);
-            if(ev.type==='chunk'&&ev.content){ raw+=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;} scrollChat(); }
+            if(ev.type==='chunk'&&ev.content){ raw+=ev.content; const m=chatMessages.value[bi]; if(m){ const h=typeof marked!=='undefined'?marked.parse(raw):raw; m.content=raw; m.html=chatHtmlWithDetectionButtons(h); } scrollChat(); }
             else if(ev.type==='tool_start'){ tc.push({name:ev.name||'',input:ev.input||{}}); const m=chatMessages.value[bi]; if(m) m.toolCalls=[...tc]; scrollChat(); }
             else if(ev.type==='tool_end') scrollChat();
-            else if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;if(tc.length)m.toolCalls=[...tc];} scrollChat(); }
+            else if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){ const h=typeof marked!=='undefined'?marked.parse(raw):raw; m.content=raw; m.html=chatHtmlWithDetectionButtons(h); if(tc.length) m.toolCalls=[...tc]; } scrollChat(); }
           } catch{} } }
-        if(buf.trim()){ try { const ev=JSON.parse(buf); if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){m.content=raw;m.html=typeof marked!=='undefined'?marked.parse(raw):raw;} } } catch{} }
-        const m=chatMessages.value[bi]; if(m&&!m.html&&m.content) m.html=typeof marked!=='undefined'?marked.parse(m.content):m.content;
+        if(buf.trim()){ try { const ev=JSON.parse(buf); if(ev.type==='full_response'&&ev.content){ raw=ev.content; const m=chatMessages.value[bi]; if(m){ const h=typeof marked!=='undefined'?marked.parse(raw):raw; m.content=raw; m.html=chatHtmlWithDetectionButtons(h); } } } catch{} }
+        const m=chatMessages.value[bi]; if(m&&!m.html&&m.content) m.html=chatHtmlWithDetectionButtons(typeof marked!=='undefined'?marked.parse(m.content):m.content);
       } catch(err) { const m=chatMessages.value[bi]; if(m){m.content='Error: '+(err.message||'Failed');m.html=m.content;} }
       chatLoading.value=false; scrollChat();
     }
@@ -1945,7 +2009,7 @@ createApp({
       streamUrl, streamActive, rightTab, videos, selectedVideo, videoUploading, selectVideo, onVideoUpload,
       status, events, detections, animals, shortenId, isDangerous, onStreamError,
       thumbnailUrl, thumbnailExists, onThumbError, timeAgo, formatTime,
-      chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, sendChatMessage,
+      chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, sendChatMessage, resetChat, onChatBodyClick,
       settingsOpen, settingsForm, settingsSaving, settingsMessage, resetDbLoading, loadSettings, saveSettings, resetDb, toggleTracking,
       detectionModalOpen, detectionDetail, detectionModalLoading, openDetectionModal, closeDetectionModal, videoClipUrl, hasClipFrames, recordingUrl, formatDuration,
       videoPlayerRef, playerState, progressFill, progressBuffered,

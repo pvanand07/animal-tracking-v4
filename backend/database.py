@@ -1,4 +1,6 @@
 """SQLite database setup and CRUD operations."""
+import csv
+import io
 import sqlite3
 import threading
 import json
@@ -412,8 +414,36 @@ def get_detection_detail(tracking_id: str) -> dict | None:
 
 # ── Agent: Schema & read-only query ─────────────────────────────
 
+# Short context for each table (purpose, key columns, relationships).
+_TABLE_CONTEXT = {
+    "animals": (
+        "Known species/reference data. One row per animal type. Used to identify detections; "
+        "detections.animal_id references animals.id. Fields include physical traits (height_cm, weight_kg, color), "
+        "diet, habitat, conservation_status, scientific_name, safety_info, is_dangerous (0/1)."
+    ),
+    "events": (
+        "One row per tracked sighting (one tracking_id). start_time/end_time are UTC ISO; end_time NULL = active. "
+        "start_frame/end_frame are video frame numbers. bbox is JSON. vid_id links to recordings.vid_id when "
+        "event-triggered recording exists for this event."
+    ),
+    "ai_detections": (
+        "LLM-derived labels per tracking_id (one row per tracking_id). common_name, scientific_name, description. "
+        "Joins with events/detections on tracking_id."
+    ),
+    "detections": (
+        "Links a tracking_id to a known animal: animal_id -> animals.id. One row per tracked detection; "
+        "same tracking_id may appear in events (time range) and ai_detections (LLM label)."
+    ),
+    "recordings": (
+        "Event-triggered video clips. vid_id is primary key; filepath is under backend/recordings/. "
+        "started_at/ended_at UTC ISO; duration_s, preroll_s (seconds of pre-event buffer). "
+        "events.vid_id references this table."
+    ),
+}
+
+
 def get_schema_txt() -> str:
-    """Return full database schema as plain text for documentation."""
+    """Return full database schema as plain text for documentation, with table context."""
     lines = ["# Database schema (SQLite)", ""]
     with get_db() as db:
         tables = db.execute(
@@ -421,11 +451,28 @@ def get_schema_txt() -> str:
         ).fetchall()
         for (tname,) in tables:
             lines.append(f"## Table: {tname}")
-            rows = db.execute(f"PRAGMA table_info({tname})").fetchall()
-            for r in rows:
+            ctx = _TABLE_CONTEXT.get(tname)
+            if ctx:
+                lines.append(f"  Context: {ctx}")
+                lines.append("")
+            col_rows = db.execute(f"PRAGMA table_info({tname})").fetchall()
+            col_names = []
+            for r in col_rows:
                 _cid, name, ctype, _notnull, _default, pk = r
+                col_names.append(name)
                 pk_str = " PRIMARY KEY" if pk else ""
                 lines.append(f"  - {name}: {ctype}{pk_str}")
+            # Sample rows (up to 2) as CSV
+            sample = db.execute(f'SELECT * FROM "{tname}" LIMIT 2').fetchall()
+            if sample:
+                lines.append("  Sample rows (up to 2):")
+                buf = io.StringIO()
+                writer = csv.writer(buf)
+                writer.writerow(col_names)
+                for row in sample:
+                    writer.writerow([r if r is not None else "" for r in row])
+                for line in buf.getvalue().strip().splitlines():
+                    lines.append(f"    {line}")
             lines.append("")
         # Indexes
         lines.append("# Indexes")
