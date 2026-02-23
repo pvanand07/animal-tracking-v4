@@ -31,10 +31,11 @@ from config import config, get_config_for_ui, save_config
 from database import (
     init_db, get_active_events, get_all_events, get_all_detections,
     get_all_animals, get_detection_by_tracking, get_detection_detail, get_event_by_tracking_id,
-    get_schema_txt, execute_read_only_query, reset_db,
+    get_schema_txt, execute_read_only_query, reset_db, get_all_recordings,
 )
 from event_manager import EventManager
 from tracker import Tracker
+from recording_coordinator import RecordingCoordinator
 from ai_chat import process_message as chat_process_message
 
 logging.basicConfig(
@@ -46,7 +47,10 @@ log = logging.getLogger("main")
 
 # ── Globals ────────────────────────────────────────────────────
 event_manager = EventManager()
+# Coordinator is wired to the tracker's ring_buffer after tracker is created
 tracker = Tracker(event_manager)
+recording_coordinator = RecordingCoordinator(tracker.ring_buffer)
+tracker.recording_coordinator = recording_coordinator
 event_ws_clients: list[WebSocket] = []
 _auto_pause_task: asyncio.Task | None = None
 
@@ -72,6 +76,7 @@ async def lifespan(app: FastAPI):
     init_db()
     os.makedirs(config.thumbnails_dir, exist_ok=True)
     os.makedirs(config.input_videos_dir, exist_ok=True)
+    os.makedirs(config.recordings_dir, exist_ok=True)
     # Migrate legacy video.mp4 from backend root to input_videos
     legacy_video = Path(__file__).parent / "video.mp4"
     if legacy_video.exists():
@@ -95,6 +100,7 @@ async def lifespan(app: FastAPI):
             pass
 
     event_manager.on_event_update = threadsafe_event_update
+    event_manager.on_recording_event = recording_coordinator.on_event
     # Tracker starts paused; user clicks Start in UI (auto-pauses after 10 min)
     log.info("Tracker ready (paused — click Start to begin)")
 
@@ -118,6 +124,10 @@ app.add_middleware(
 # Serve thumbnails as static files
 os.makedirs(config.thumbnails_dir, exist_ok=True)
 app.mount("/thumbnails", StaticFiles(directory=config.thumbnails_dir), name="thumbnails")
+
+# Serve recordings as static files
+os.makedirs(config.recordings_dir, exist_ok=True)
+app.mount("/recordings", StaticFiles(directory=config.recordings_dir), name="recordings")
 
 
 # ── MJPEG Stream ───────────────────────────────────────────────
@@ -278,7 +288,17 @@ def api_status():
         "fps": round(tracker.fps, 1),
         "active_tracks": len(event_manager.get_active_tracks()),
         "active_tracks_list": event_manager.get_active_tracks(),
+        "recording": recording_coordinator.is_recording,
+        "active_vid_id": recording_coordinator.active_vid_id,
     }
+
+
+# ── Recordings API ───────────────────────────────────────────────
+
+@app.get("/api/recordings")
+def api_recordings(limit: int = Query(default=50, le=200)):
+    """Return a list of completed and in-progress event recordings."""
+    return get_all_recordings(limit)
 
 
 # ── Videos API ───────────────────────────────────────────────────
@@ -342,6 +362,10 @@ class ConfigUpdate(BaseModel):
     auto_pause_minutes: Optional[int] = None
     use_webcam: Optional[bool] = None
     webcam_index: Optional[int] = None
+    recording_enabled: Optional[bool] = None
+    preroll_seconds: Optional[float] = None
+    cooldown_seconds: Optional[float] = None
+    max_clip_seconds: Optional[int] = None
 
 
 @app.patch("/api/config")

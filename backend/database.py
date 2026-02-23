@@ -90,11 +90,21 @@ def init_db():
                 FOREIGN KEY (animal_id) REFERENCES animals(id)
             );
 
+            CREATE TABLE IF NOT EXISTS recordings (
+                vid_id     TEXT PRIMARY KEY,
+                filepath   TEXT,
+                started_at TEXT NOT NULL,
+                ended_at   TEXT,
+                duration_s REAL,
+                preroll_s  REAL DEFAULT 3.5
+            );
+
             CREATE INDEX IF NOT EXISTS idx_events_tracking ON events(tracking_id);
             CREATE INDEX IF NOT EXISTS idx_ai_det_tracking ON ai_detections(tracking_id);
             CREATE INDEX IF NOT EXISTS idx_detections_tracking ON detections(tracking_id);
             CREATE INDEX IF NOT EXISTS idx_animals_name ON animals(animal);
             CREATE INDEX IF NOT EXISTS idx_animals_sci ON animals(scientific_name);
+            CREATE INDEX IF NOT EXISTS idx_recordings_started ON recordings(started_at);
         """)
         # Add safety_info and is_dangerous to existing DBs (no-op if already present)
         for col, ctype in [("safety_info", "TEXT"), ("is_dangerous", "INTEGER")]:
@@ -102,6 +112,11 @@ def init_db():
                 db.execute(f"ALTER TABLE animals ADD COLUMN {col} {ctype}")
             except sqlite3.OperationalError:
                 pass  # column already exists
+        # Add vid_id FK to events table for existing DBs
+        try:
+            db.execute("ALTER TABLE events ADD COLUMN vid_id TEXT REFERENCES recordings(vid_id)")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 # ── Events ─────────────────────────────────────────────────────
@@ -167,6 +182,50 @@ def get_event_by_tracking_id(tracking_id: str) -> dict | None:
         return dict(row) if row else None
 
 
+# ── Recordings ────────────────────────────────────────────────
+
+def create_recording(vid_id: str, filepath: str, preroll_s: float = 3.5) -> None:
+    ts = now_iso()
+    with get_db() as db:
+        db.execute(
+            "INSERT OR IGNORE INTO recordings (vid_id, filepath, started_at, preroll_s) VALUES (?, ?, ?, ?)",
+            (vid_id, filepath, ts, preroll_s),
+        )
+
+
+def end_recording(vid_id: str, ended_at: str, duration_s: float) -> None:
+    with get_db() as db:
+        db.execute(
+            "UPDATE recordings SET ended_at = ?, duration_s = ? WHERE vid_id = ?",
+            (ended_at, duration_s, vid_id),
+        )
+
+
+def link_event_to_recording(tracking_id: str, vid_id: str) -> None:
+    with get_db() as db:
+        db.execute(
+            "UPDATE events SET vid_id = ? WHERE tracking_id = ?",
+            (vid_id, tracking_id),
+        )
+
+
+def get_all_recordings(limit: int = 50) -> list[dict]:
+    with get_db() as db:
+        rows = db.execute(
+            "SELECT * FROM recordings ORDER BY started_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_recording(vid_id: str) -> dict | None:
+    with get_db() as db:
+        row = db.execute(
+            "SELECT * FROM recordings WHERE vid_id = ?", (vid_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
 # ── AI Detections ──────────────────────────────────────────────
 
 def upsert_ai_detection(tracking_id: str, common_name: str, scientific_name: str, description: str):
@@ -199,12 +258,13 @@ def delete_tracker_entry(tracking_id: str):
 
 
 def reset_db():
-    """Delete all data from events, ai_detections, detections, and animals tables."""
+    """Delete all data from all tracking tables."""
     with get_db() as db:
         db.execute("DELETE FROM detections")
         db.execute("DELETE FROM ai_detections")
         db.execute("DELETE FROM events")
         db.execute("DELETE FROM animals")
+        db.execute("DELETE FROM recordings")
 
 
 # ── Animals ────────────────────────────────────────────────────
@@ -298,11 +358,14 @@ def get_all_detections(limit: int = 200) -> list[dict]:
                       a.animal, a.scientific_name, a.conservation_status, a.family,
                       a.safety_info, a.is_dangerous,
                       ad.description,
-                      e.start_time, e.end_time, e.last_seen, e.bbox, e.start_frame, e.end_frame
+                      e.start_time, e.end_time, e.last_seen, e.bbox, e.start_frame, e.end_frame,
+                      e.vid_id,
+                      r.filepath AS recording_filepath, r.duration_s AS recording_duration_s
                FROM detections d
                LEFT JOIN animals a ON d.animal_id = a.id
                LEFT JOIN ai_detections ad ON d.tracking_id = ad.tracking_id
                LEFT JOIN events e ON d.tracking_id = e.tracking_id
+               LEFT JOIN recordings r ON e.vid_id = r.vid_id
                ORDER BY d.id DESC LIMIT ?""",
             (limit,),
         ).fetchall()
@@ -320,7 +383,7 @@ def get_detection_by_tracking(tracking_id: str) -> dict | None:
 
 
 def get_detection_detail(tracking_id: str) -> dict | None:
-    """Return full detection with animal, event, and ai_detection data for modal display."""
+    """Return full detection with animal, event, ai_detection, and recording data for modal display."""
     with get_db() as db:
         row = db.execute(
             """SELECT d.id AS detection_id, d.tracking_id, d.animal_id,
@@ -330,11 +393,17 @@ def get_detection_detail(tracking_id: str) -> dict | None:
                       a.top_speed_kmh, a.social_structure, a.offspring_per_birth,
                       a.safety_info, a.is_dangerous,
                       ad.description AS ai_description,
-                      e.start_time, e.end_time, e.last_seen, e.bbox, e.start_frame, e.end_frame
+                      e.start_time, e.end_time, e.last_seen, e.bbox, e.start_frame, e.end_frame,
+                      e.vid_id,
+                      r.filepath AS recording_filepath,
+                      r.duration_s AS recording_duration_s,
+                      r.preroll_s AS recording_preroll_s,
+                      r.started_at AS recording_started_at
                FROM detections d
                LEFT JOIN animals a ON d.animal_id = a.id
                LEFT JOIN ai_detections ad ON d.tracking_id = ad.tracking_id
                LEFT JOIN events e ON d.tracking_id = e.tracking_id
+               LEFT JOIN recordings r ON e.vid_id = r.vid_id
                WHERE d.tracking_id = ?""",
             (tracking_id,),
         ).fetchone()

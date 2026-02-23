@@ -58,7 +58,8 @@ class EventManager:
     def __init__(self):
         self._tracks: dict[int, TrackedObject] = {}
         self._lock = threading.Lock()
-        self.on_event_update = None  # callback: (event_dict) -> None
+        self.on_event_update = None     # callback: (event_dict) -> None
+        self.on_recording_event = None  # callback: (tracking_id: str, bbox: list) -> None
 
     def update(self, detections: list[dict], frame: np.ndarray, mono_time: float, frame_number: int | None = None, skip_crop_update: bool = False):
         """
@@ -140,6 +141,16 @@ class EventManager:
                     obj.event_started = True
                     create_event(obj.tracking_id, obj.bbox, start_frame=frame_number)
                     log.info(f"Event started: {obj.tracking_id} (tracked {duration:.1f}s)")
+
+                    # Notify recording coordinator (preroll + live recording trigger)
+                    if self.on_recording_event:
+                        log.info("Firing on_recording_event for tracking_id=%s", obj.tracking_id)
+                        try:
+                            self.on_recording_event(obj.tracking_id, obj.bbox)
+                        except Exception as exc:
+                            log.error("on_recording_event callback error: %s", exc)
+                    else:
+                        log.debug("on_recording_event not wired (no coordinator attached)")
 
                     # Save thumbnail
                     self._save_thumbnail(obj)

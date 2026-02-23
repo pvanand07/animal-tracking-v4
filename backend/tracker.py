@@ -3,11 +3,13 @@ import re
 import time
 import logging
 import threading
+from typing import Optional
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from config import config
 from event_manager import EventManager
+from ring_buffer import RingBuffer
 
 log = logging.getLogger("tracker")
 
@@ -22,13 +24,15 @@ def _engine_imgsz_from_path(path: str) -> int:
 
 class Tracker:
     """
-    Reads video.mp4, runs YOLO BoTSORT tracking, and:
+    Reads video.mp4 or webcam, runs YOLO BoTSORT tracking, and:
     - Puts annotated JPEG frames into a shared buffer for streaming
     - Feeds detections into the EventManager using real wall-clock time
+    - Fans out raw BGR frames to RingBuffer and RecordingCoordinator
     """
 
-    def __init__(self, event_manager: EventManager):
+    def __init__(self, event_manager: EventManager, recording_coordinator=None):
         self.event_manager = event_manager
+        self.recording_coordinator = recording_coordinator
         self.model = YOLO(config.yolo_model_path)
         self.running = False
         self._thread: threading.Thread | None = None
@@ -40,6 +44,7 @@ class Tracker:
         self.video_finished = False
         self._last_detections: list = []
         self._last_annotated: bytes | None = None
+        self.ring_buffer = RingBuffer(fps=config.stream_fps, preroll_s=config.preroll_seconds)
 
     @property
     def latest_frame(self) -> bytes | None:
@@ -101,6 +106,12 @@ class Tracker:
                     break
 
                 loop_start = time.monotonic()
+
+                # Fan-out raw frame to ring buffer and active recorder
+                self.ring_buffer.append(frame)
+                if self.recording_coordinator is not None:
+                    self.recording_coordinator.push_frame(frame)
+
                 run_inference = (
                     self.frame_count % config.inference_interval == 0
                     or self._last_annotated is None
@@ -186,12 +197,13 @@ class Tracker:
 
                 self.frame_count += 1
 
-                # Frame rate control
+                # Frame rate control — sleep first, then measure total frame duration for accurate FPS
                 elapsed = time.monotonic() - loop_start
-                self.fps = 1.0 / elapsed if elapsed > 0 else 0
                 sleep_time = frame_interval - elapsed
                 if sleep_time > 0:
                     time.sleep(sleep_time)
+                total_elapsed = time.monotonic() - loop_start
+                self.fps = 1.0 / total_elapsed if total_elapsed > 0 else 0
 
             cap.release()
 

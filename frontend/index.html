@@ -572,6 +572,28 @@
       gap: 1px;
     }
 
+    .rec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      border-radius: 100px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: rgba(232, 93, 93, 0.12);
+      color: var(--accent-red);
+      border: 1px solid rgba(232, 93, 93, 0.2);
+    }
+
+    .rec-badge::before {
+      content: '';
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      flex-shrink: 0;
+    }
+
     /* ── Animals DB ────────────────────────── */
     .animals-grid {
       display: flex;
@@ -913,25 +935,235 @@
       flex: 1;
     }
 
-    .modal-video {
+    /* ── Video placeholder (no recording) ── */
+    .modal-video-ph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      gap: 6px;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    /* MJPEG fallback */
+    .modal-video-mjpeg {
       position: relative;
       width: 100%;
       background: #000;
-      min-height: 200px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .modal-video-mjpeg img { width: 100%; max-height: 300px; object-fit: contain; display: block; }
+
+    /* ── Custom Video Player ──────────────── */
+    .video-player-wrap {
+      position: relative;
+      background: #000;
+      border-bottom: 1px solid var(--border-subtle);
+      overflow: hidden;
     }
 
-    .modal-video img { width: 100%; max-height: 300px; object-fit: contain; display: block; }
+    .video-player-wrap video {
+      width: 100%;
+      max-height: 320px;
+      display: block;
+      background: #000;
+      outline: none;
+    }
 
-    .modal-video-ph {
+    /* Fullscreen overrides */
+    .video-player-wrap:fullscreen,
+    .video-player-wrap:-webkit-full-screen,
+    .video-player-wrap:-moz-full-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      border-bottom: none;
+      overflow: visible;
+    }
+
+    .video-player-wrap:fullscreen video,
+    .video-player-wrap:-webkit-full-screen video,
+    .video-player-wrap:-moz-full-screen video {
+      width: 100%;
+      height: 100%;
+      max-height: 100vh;
+      object-fit: contain;
+    }
+
+    .video-player-wrap:fullscreen .video-controls,
+    .video-player-wrap:-webkit-full-screen .video-controls,
+    .video-player-wrap:-moz-full-screen .video-controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+    }
+
+    /* Gradient scrim for controls */
+    .video-controls {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      padding: 40px 14px 10px;
+      background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .video-player-wrap:hover .video-controls,
+    .video-player-wrap.paused .video-controls { opacity: 1; }
+
+    /* Progress bar */
+    .video-progress {
+      position: relative;
+      height: 3px;
+      background: rgba(255,255,255,0.18);
+      border-radius: 3px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: height 0.15s ease;
+    }
+
+    .video-controls:hover .video-progress { height: 5px; }
+
+    .video-progress-buf {
+      position: absolute; top: 0; left: 0;
+      height: 100%;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .video-progress-fill {
+      position: absolute; top: 0; left: 0;
+      height: 100%;
+      background: var(--accent-warm);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .video-progress-thumb {
+      position: absolute; top: 50%;
+      width: 11px; height: 11px;
+      background: var(--accent-warm);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      box-shadow: 0 0 8px rgba(212,175,118,0.6);
+    }
+
+    .video-controls:hover .video-progress-thumb { opacity: 1; }
+
+    /* Controls row */
+    .video-controls-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .video-btn {
+      width: 30px; height: 30px;
+      border: none;
+      background: transparent;
+      color: rgba(255,255,255,0.75);
+      cursor: pointer;
+      border-radius: var(--radius-xs);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 0;
+      transition: all 0.15s ease;
+    }
+
+    .video-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+    .video-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .video-btn svg.filled { fill: currentColor; stroke: none; }
+
+    .video-time {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: rgba(255,255,255,0.6);
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 4px;
+    }
+
+    .video-time b { color: rgba(255,255,255,0.9); font-weight: 500; }
+    .video-time-sep { opacity: 0.4; }
+
+    /* Center play button */
+    .video-play-center {
       position: absolute;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--text-muted);
-      font-size: 12px;
-      gap: 6px;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
     }
+
+    .video-play-circle {
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: rgba(12, 15, 20, 0.55);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .video-player-wrap:hover .video-play-circle {
+      background: rgba(212,175,118,0.2);
+      border-color: rgba(212,175,118,0.4);
+    }
+
+    .video-play-circle svg { width: 22px; height: 22px; color: #fff; margin-left: 2px; }
+
+    /* Rec meta strip */
+    .rec-info-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }
+
+    .rec-info-bar .rec-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent-red);
+      flex-shrink: 0;
+      animation: pulse 2s ease infinite;
+      box-shadow: 0 0 4px rgba(232,93,93,0.5);
+    }
+
+    .rec-info-bar .rec-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--accent-red);
+      text-transform: uppercase;
+    }
+
+    .rec-info-bar .rec-sep { opacity: 0.25; }
+    .rec-info-bar .rec-vid-id { opacity: 0.4; margin-left: auto; }
 
     .modal-sections { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -1227,6 +1459,7 @@
                   {{ isDangerous(det.is_dangerous) ? '⚠ Danger' : '✓ Safe' }}
                 </span>
                 <div class="det-meta-right">
+                  <span v-if="det.recording_filepath" class="rec-badge">REC</span>
                   <span v-if="det.family">{{ det.family }}</span>
                   <span>{{ shortenId(det.tracking_id) }}</span>
                 </div>
@@ -1234,6 +1467,7 @@
               <div class="card-meta" style="margin-top:4px;">
                 <span>🕐 {{ timeAgo(det.last_seen || det.end_time || det.start_time) }}</span>
                 <span class="time-pill" v-if="det.start_time">{{ formatTime(det.start_time) }}</span>
+                <span class="time-pill" v-if="det.recording_duration_s">{{ formatDuration(det.recording_duration_s) }}</span>
               </div>
             </div>
           </div>
@@ -1328,10 +1562,80 @@
           <div class="modal-loading">Loading detection…</div>
         </template>
         <template v-else-if="detectionDetail">
-          <div class="modal-video">
-            <img v-if="hasClipFrames(detectionDetail)" :src="videoClipUrl(detectionDetail.tracking_id)" alt="Clip" />
-            <div v-else class="modal-video-ph"><span>🎬</span><span>No clip available</span></div>
+          <!-- MP4 Recording: custom player -->
+          <template v-if="detectionDetail.recording_filepath">
+            <div class="rec-info-bar">
+              <span class="rec-dot"></span>
+              <span class="rec-label">Rec</span>
+              <span class="rec-sep">|</span>
+              <span v-if="detectionDetail.recording_duration_s">{{ formatDuration(detectionDetail.recording_duration_s) }}</span>
+              <span v-if="detectionDetail.recording_preroll_s" class="rec-sep">·</span>
+              <span v-if="detectionDetail.recording_preroll_s">{{ detectionDetail.recording_preroll_s }}s preroll</span>
+              <span class="rec-vid-id" v-if="detectionDetail.vid_id">{{ detectionDetail.vid_id.substring(0,16) }}…</span>
+            </div>
+            <div class="video-player-wrap" :class="{ paused: !playerState.playing }" @click="togglePlay">
+              <video ref="videoPlayerRef"
+                :key="detectionDetail.vid_id"
+                preload="metadata"
+                playsinline
+                @timeupdate="onVideoTimeUpdate"
+                @loadedmetadata="onVideoLoadedMetadata"
+                @play="onVideoPlay"
+                @pause="onVideoPause"
+                @ended="onVideoEnded">
+                <source :src="recordingUrl(detectionDetail.recording_filepath)" type="video/mp4" />
+              </video>
+
+              <!-- Center play/pause indicator -->
+              <div class="video-play-center" v-show="!playerState.playing">
+                <div class="video-play-circle">
+                  <svg viewBox="0 0 24 24" fill="white" stroke="none"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+              </div>
+
+              <!-- Bottom controls -->
+              <div class="video-controls" @click.stop>
+                <!-- Scrubber -->
+                <div class="video-progress" @click="seekTo">
+                  <div class="video-progress-buf" :style="{ width: progressBuffered + '%' }"></div>
+                  <div class="video-progress-fill" :style="{ width: progressFill + '%' }"></div>
+                  <div class="video-progress-thumb" :style="{ left: progressFill + '%' }"></div>
+                </div>
+                <!-- Controls row -->
+                <div class="video-controls-row">
+                  <!-- Play/Pause -->
+                  <button class="video-btn" @click.stop="togglePlay" :title="playerState.playing ? 'Pause' : 'Play'">
+                    <svg v-if="playerState.playing" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                    <svg v-else viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5,3 19,12 5,21"/></svg>
+                  </button>
+                  <!-- Time -->
+                  <div class="video-time">
+                    <b>{{ formatVideoTime(playerState.currentTime) }}</b>
+                    <span class="video-time-sep">/</span>
+                    <span>{{ formatVideoTime(playerState.duration) }}</span>
+                  </div>
+                  <div style="flex:1"></div>
+                  <!-- Mute -->
+                  <button class="video-btn" @click.stop="toggleMute" :title="playerState.muted ? 'Unmute' : 'Mute'">
+                    <svg v-if="!playerState.muted" viewBox="0 0 24 24"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                    <svg v-else viewBox="0 0 24 24"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                  </button>
+                  <!-- Fullscreen -->
+                  <button class="video-btn" @click.stop="toggleFullscreen" title="Fullscreen">
+                    <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- MJPEG fallback (no recording, but has frame range) -->
+          <div v-else-if="hasClipFrames(detectionDetail)" class="modal-video-mjpeg">
+            <img :src="videoClipUrl(detectionDetail.tracking_id)" alt="Clip" />
           </div>
+
+          <!-- No clip -->
+          <div v-else class="modal-video-ph"><span>🎬</span><span>No clip available</span></div>
           <div class="modal-sections">
             <div v-if="detectionDetail.ai_description" class="info-block">
               <h4>Description</h4>
@@ -1455,7 +1759,7 @@
   }
 })();
 
-const { createApp, ref, reactive, onMounted, onUnmounted, nextTick, watch } = Vue;
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, nextTick, watch } = Vue;
 
 createApp({
   setup() {
@@ -1471,7 +1775,25 @@ createApp({
     const chatLoading = ref(false);
     const chatThreadId = ref('default');
     const chatMessagesRef = ref(null);
+    const videoPlayerRef = ref(null);
     const tick = ref(Date.now());
+
+    // ── Video player state ──────────────────
+    const playerState = reactive({ playing: false, currentTime: 0, duration: 0, muted: false, bufferedEnd: 0 });
+    const progressFill = computed(() => playerState.duration > 0 ? Math.min(100, (playerState.currentTime / playerState.duration) * 100) : 0);
+    const progressBuffered = computed(() => playerState.duration > 0 ? Math.min(100, (playerState.bufferedEnd / playerState.duration) * 100) : 0);
+
+    function onVideoTimeUpdate() { const v = videoPlayerRef.value; if (!v) return; playerState.currentTime = v.currentTime; if (v.buffered.length) playerState.bufferedEnd = v.buffered.end(v.buffered.length - 1); }
+    function onVideoLoadedMetadata() { const v = videoPlayerRef.value; if (!v) return; playerState.duration = v.duration || 0; playerState.currentTime = 0; }
+    function onVideoPlay() { playerState.playing = true; }
+    function onVideoPause() { playerState.playing = false; }
+    function onVideoEnded() { playerState.playing = false; }
+    function togglePlay() { const v = videoPlayerRef.value; if (!v) return; playerState.playing ? v.pause() : v.play(); }
+    function toggleMute() { const v = videoPlayerRef.value; if (!v) return; playerState.muted = !playerState.muted; v.muted = playerState.muted; }
+    function seekTo(e) { const v = videoPlayerRef.value; if (!v || !playerState.duration) return; const r = e.currentTarget.getBoundingClientRect(); v.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * playerState.duration; }
+    function toggleFullscreen() { const w = videoPlayerRef.value?.closest('.video-player-wrap'); if (!w) return; document.fullscreenElement ? document.exitFullscreen() : w.requestFullscreen?.(); }
+    function formatVideoTime(s) { if (!s || isNaN(s)) return '0:00'; const m = Math.floor(s / 60), sec = Math.floor(s % 60); return `${m}:${sec.toString().padStart(2,'0')}`; }
+    function _resetPlayer() { playerState.playing = false; playerState.currentTime = 0; playerState.duration = 0; playerState.bufferedEnd = 0; }
 
     const status = reactive({ tracker_running: false, video_finished: false, frame_count: 0, fps: 0, active_tracks: 0 });
     const events = ref([]);
@@ -1550,9 +1872,21 @@ createApp({
     watch(settingsOpen,(o)=>{ if(o){fetchVideos();loadSettings();} });
     watch(()=>settingsForm.video_path,(p)=>{selectedVideo.value=p||'';});
     watch(selectedVideo,(p)=>{settingsForm.video_path=p||'';});
+    watch(detectionDetail, ()=>{ _resetPlayer(); });
 
     function hasClipFrames(d) { return d&&d.start_frame!=null&&d.end_frame!=null&&d.end_frame>=d.start_frame; }
     function videoClipUrl(id) { return id?`${apiBase}/api/video/${encodeURIComponent(id)}`:''; }
+    function recordingUrl(filepath) {
+      if(!filepath) return '';
+      const filename = filepath.split('/').pop();
+      return `${apiBase}/recordings/${encodeURIComponent(filename)}`;
+    }
+    function formatDuration(s) {
+      if(s==null) return '';
+      const total=Math.round(s);
+      const m=Math.floor(total/60), sec=total%60;
+      return m>0 ? `${m}m ${sec}s` : `${sec}s`;
+    }
 
     async function openDetectionModal(det) {
       if(!det?.tracking_id) return;
@@ -1561,7 +1895,7 @@ createApp({
       detectionModalLoading.value=false;
     }
 
-    function closeDetectionModal() { detectionModalOpen.value=false; detectionDetail.value=null; }
+    function closeDetectionModal() { if (videoPlayerRef.value) videoPlayerRef.value.pause(); _resetPlayer(); detectionModalOpen.value=false; detectionDetail.value=null; }
 
     function onKeydown(e) { if(e.key==='Escape'){ if(detectionModalOpen.value) closeDetectionModal(); else if(settingsOpen.value) settingsOpen.value=false; } }
 
@@ -1613,7 +1947,10 @@ createApp({
       thumbnailUrl, thumbnailExists, onThumbError, timeAgo, formatTime,
       chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, sendChatMessage,
       settingsOpen, settingsForm, settingsSaving, settingsMessage, resetDbLoading, loadSettings, saveSettings, resetDb, toggleTracking,
-      detectionModalOpen, detectionDetail, detectionModalLoading, openDetectionModal, closeDetectionModal, videoClipUrl, hasClipFrames,
+      detectionModalOpen, detectionDetail, detectionModalLoading, openDetectionModal, closeDetectionModal, videoClipUrl, hasClipFrames, recordingUrl, formatDuration,
+      videoPlayerRef, playerState, progressFill, progressBuffered,
+      onVideoTimeUpdate, onVideoLoadedMetadata, onVideoPlay, onVideoPause, onVideoEnded,
+      togglePlay, toggleMute, seekTo, toggleFullscreen, formatVideoTime,
     };
   }
 }).mount('#app');

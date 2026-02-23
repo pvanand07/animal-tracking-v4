@@ -30,6 +30,12 @@ _SCHEMA = {
     "database_path": ("animal_tracker.db", str),
     "host": ("0.0.0.0", str),
     "port": ("8000", int),
+    # Recording
+    "recording_enabled": ("false", lambda v: v if isinstance(v, bool) else str(v).lower() == "true"),
+    "preroll_seconds": ("3.5", float),
+    "cooldown_seconds": ("5.0", float),
+    "max_clip_seconds": ("300", int),
+    "recordings_dir": ("recordings", str),
 }
 
 
@@ -78,6 +84,12 @@ class Config:
     @property
     def input_videos_dir(self) -> Path:
         return _BACKEND / "input_videos"
+
+    @property
+    def recordings_dir(self) -> str:
+        raw = self._get("recordings_dir")
+        p = Path(raw)
+        return str((_BACKEND / raw).resolve()) if not p.is_absolute() else raw
 
     @property
     def video_path(self) -> str:
@@ -133,6 +145,10 @@ class Config:
             "auto_pause_minutes": self.auto_pause_minutes,
             "use_webcam": self.use_webcam,
             "webcam_index": self.webcam_index,
+            "recording_enabled": self.recording_enabled,
+            "preroll_seconds": self.preroll_seconds,
+            "cooldown_seconds": self.cooldown_seconds,
+            "max_clip_seconds": self.max_clip_seconds,
         }
 
 

@@ -1,6 +1,6 @@
 {
   "video_path": "input_videos/video.mp4",
-  "yolo_model": "yolo26n.engine",
+  "yolo_model": "best.engine",
   "yolo_confidence": 0.6,
   "stream_fps": 12,
   "inference_imgsz": 640,
@@ -10,6 +10,7 @@
   "event_start_threshold_s": 1.0,
   "event_end_threshold_s": 2.5,
   "auto_pause_minutes": 5,
-  "use_webcam": true,
-  "webcam_index": 0
+  "use_webcam": false,
+  "webcam_index": 0,
+  "recording_enabled": true
 }
