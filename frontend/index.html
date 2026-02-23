@@ -1146,6 +1146,8 @@
           <div class="stream-tags">
             <span class="stream-tag rec">REC</span>
             <span class="stream-tag">YOLO · BoTSORT</span>
+            <span class="stream-tag" v-if="settingsForm.use_webcam">📷 CAM {{ settingsForm.webcam_index }}</span>
+            <span class="stream-tag" v-else>🎬 VIDEO</span>
           </div>
           <div class="stream-stats">
             <span class="stream-stat">{{ status.fps }} fps</span>
@@ -1397,7 +1399,17 @@
       <div class="modal-body" style="padding-top:12px;">
         <p class="settings-hint">Changes apply immediately.</p>
         <div class="settings-form">
-          <div class="s-row">
+          <div class="s-row s-row-check">
+            <label>
+              <input v-model="settingsForm.use_webcam" type="checkbox" />
+              Use Webcam (live camera feed)
+            </label>
+          </div>
+          <div v-if="settingsForm.use_webcam" class="s-row">
+            <label>Webcam Index</label>
+            <input v-model.number="settingsForm.webcam_index" type="number" min="0" max="10" placeholder="0" style="max-width:120px;" />
+          </div>
+          <div v-else class="s-row">
             <label>Video Source</label>
             <div class="s-video-row">
               <select v-model="selectedVideo" @change="selectVideo">
@@ -1471,7 +1483,7 @@ createApp({
     const videos = ref([]);
     const selectedVideo = ref('');
     const videoUploading = ref(false);
-    const settingsForm = reactive({ video_path:'', yolo_model:'', yolo_confidence:0.4, stream_fps:24, event_start_threshold_s:1.5, event_end_threshold_s:2.5, auto_pause_minutes:10, loop_video:true });
+    const settingsForm = reactive({ video_path:'', yolo_model:'', yolo_confidence:0.4, stream_fps:24, event_start_threshold_s:1.5, event_end_threshold_s:2.5, auto_pause_minutes:10, loop_video:true, use_webcam:false, webcam_index:0 });
     const settingsSaving = ref(false);
     const settingsMessage = ref('');
     const resetDbLoading = ref(false);
@@ -1530,7 +1542,7 @@ createApp({
     async function fetchVideos() { try { videos.value=await(await fetch(`${apiBase}/api/videos`)).json(); } catch{} }
     async function selectVideo() { if(!selectedVideo.value) return; try { const r=await fetch(`${apiBase}/api/config/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({video_path:selectedVideo.value})}); if(r.ok) fetchStatus(); } catch{} }
     async function onVideoUpload(e) { const f=e.target?.files?.[0]; if(!f) return; videoUploading.value=true; e.target.value=''; try { const fd=new FormData(); fd.append('file',f); const r=await(await fetch(`${apiBase}/api/videos/upload`,{method:'POST',body:fd})).json(); if(r.ok){await fetchVideos();selectedVideo.value=r.path;} } catch{} videoUploading.value=false; }
-    async function loadSettings() { try { const d=await(await fetch(`${apiBase}/api/config`)).json(); Object.assign(settingsForm,{video_path:d.video_path||'',yolo_model:d.yolo_model||'',yolo_confidence:d.yolo_confidence??0.4,stream_fps:d.stream_fps??24,event_start_threshold_s:d.event_start_threshold_s??1.5,event_end_threshold_s:d.event_end_threshold_s??2.5,auto_pause_minutes:d.auto_pause_minutes??10,loop_video:d.loop_video??true}); } catch{} }
+    async function loadSettings() { try { const d=await(await fetch(`${apiBase}/api/config`)).json(); Object.assign(settingsForm,{video_path:d.video_path||'',yolo_model:d.yolo_model||'',yolo_confidence:d.yolo_confidence??0.4,stream_fps:d.stream_fps??24,event_start_threshold_s:d.event_start_threshold_s??1.5,event_end_threshold_s:d.event_end_threshold_s??2.5,auto_pause_minutes:d.auto_pause_minutes??10,loop_video:d.loop_video??true,use_webcam:d.use_webcam??false,webcam_index:d.webcam_index??0}); } catch{} }
     async function saveSettings() { settingsSaving.value=true; settingsMessage.value=''; try { const body={}; for(const k of Object.keys(settingsForm)) if(settingsForm[k]!==undefined) body[k]=settingsForm[k]; const r=await(await fetch(`${apiBase}/api/config/save`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json(); settingsMessage.value=r.message||'Saved'; setTimeout(()=>{settingsMessage.value='';},3000); } catch{ settingsMessage.value='Failed'; } settingsSaving.value=false; }
     async function resetDb() { if(!confirm('Reset database? This will delete all events, detections, and animals.')) return; resetDbLoading.value=true; settingsMessage.value=''; try { const r=await(await fetch(`${apiBase}/api/db/reset`,{method:'POST'})).json(); if(r.ok){ events.value=[]; fetchData(); settingsMessage.value='Database reset.'; setTimeout(()=>{settingsMessage.value='';},3000); } else throw 0; } catch{ settingsMessage.value='Reset failed'; } resetDbLoading.value=false; }
     async function toggleTracking() { try { const ep=status.tracker_running?'/api/tracker/pause':'/api/tracker/start'; const r=await(await fetch(`${apiBase}${ep}`,{method:'POST'})).json(); if(r.ok) fetchStatus(); } catch{} }
@@ -1582,7 +1594,7 @@ createApp({
 
     onMounted(async()=>{
       connectEventWs(); fetchStatus(); fetchData(); await fetchVideos();
-      try { const d=await(await fetch(`${apiBase}/api/config`)).json(); selectedVideo.value=d.video_path||''; } catch{}
+      try { const d=await(await fetch(`${apiBase}/api/config`)).json(); selectedVideo.value=d.video_path||''; settingsForm.use_webcam=d.use_webcam??false; settingsForm.webcam_index=d.webcam_index??0; } catch{}
       statusInterval=setInterval(fetchStatus,2000);
       dataInterval=setInterval(fetchData,5000);
       tickInterval=setInterval(()=>{tick.value=Date.now();},5000);

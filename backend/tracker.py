@@ -66,21 +66,38 @@ class Tracker:
 
     def _run(self):
         while self.running:
-            cap = cv2.VideoCapture(config.video_path)
-            if not cap.isOpened():
-                log.error(f"Cannot open video: {config.video_path}")
-                time.sleep(2)
-                continue
+            use_webcam = config.use_webcam
+            if use_webcam:
+                source = config.webcam_index
+                cap = cv2.VideoCapture(source)
+                if not cap.isOpened():
+                    log.error(f"Cannot open webcam index {source}")
+                    time.sleep(2)
+                    continue
+                video_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+                if video_fps < 1:
+                    video_fps = 30
+                log.info(f"Webcam {source} opened (streaming at {config.stream_fps} FPS)")
+            else:
+                source = config.video_path
+                cap = cv2.VideoCapture(source)
+                if not cap.isOpened():
+                    log.error(f"Cannot open video: {source}")
+                    time.sleep(2)
+                    continue
+                video_fps = cap.get(cv2.CAP_PROP_FPS) or 30
+                log.info(f"Video opened: {source} at {video_fps} FPS (streaming at {config.stream_fps} FPS)")
 
-            video_fps = cap.get(cv2.CAP_PROP_FPS) or 30
             target_fps = min(config.stream_fps, video_fps)
             frame_interval = 1.0 / target_fps
-
-            log.info(f"Video opened: {config.video_path} at {video_fps} FPS (streaming at {target_fps} FPS)")
 
             while self.running and cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
+                    if use_webcam:
+                        log.warning("Webcam read failed, retrying…")
+                        time.sleep(0.1)
+                        continue
                     break
 
                 loop_start = time.monotonic()
@@ -133,10 +150,11 @@ class Tracker:
 
                     self._last_detections = detections
 
-                    # Draw FPS overlay
+                    # Draw FPS / source overlay
+                    source_label = f"CAM:{config.webcam_index}" if use_webcam else "VIDEO"
                     cv2.putText(
                         annotated,
-                        f"FPS: {self.fps:.1f} | Tracks: {len(detections)}",
+                        f"FPS: {self.fps:.1f} | Tracks: {len(detections)} | {source_label}",
                         (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.8,
@@ -176,6 +194,13 @@ class Tracker:
                     time.sleep(sleep_time)
 
             cap.release()
+
+            if use_webcam:
+                # Webcam disconnected — retry after a short delay
+                if self.running:
+                    log.warning("Webcam stream ended, retrying in 2s…")
+                    time.sleep(2)
+                continue
 
             if not config.loop_video:
                 self.video_finished = True

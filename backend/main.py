@@ -340,6 +340,8 @@ class ConfigUpdate(BaseModel):
     event_start_threshold_s: Optional[float] = None
     event_end_threshold_s: Optional[float] = None
     auto_pause_minutes: Optional[int] = None
+    use_webcam: Optional[bool] = None
+    webcam_index: Optional[int] = None
 
 
 @app.patch("/api/config")

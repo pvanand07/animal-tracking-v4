@@ -22,6 +22,8 @@ _SCHEMA = {
     "event_start_threshold_s": ("1.5", float),
     "event_end_threshold_s": ("2.5", float),
     "auto_pause_minutes": ("10", int),
+    "use_webcam": ("false", lambda v: v if isinstance(v, bool) else str(v).lower() == "true"),
+    "webcam_index": ("0", int),
     "openrouter_api_key": ("", str),
     "openrouter_base_url": ("https://openrouter.ai/api/v1", str),
     "thumbnails_dir": ("thumbnails", str),
@@ -129,6 +131,8 @@ class Config:
             "event_start_threshold_s": self.event_start_threshold_s,
             "event_end_threshold_s": self.event_end_threshold_s,
             "auto_pause_minutes": self.auto_pause_minutes,
+            "use_webcam": self.use_webcam,
+            "webcam_index": self.webcam_index,
         }
 
 
