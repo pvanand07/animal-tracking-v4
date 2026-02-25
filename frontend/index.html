@@ -741,6 +741,35 @@
       border-bottom-left-radius: 4px;
     }
 
+    .chat-bubble-bot-inner {
+      position: relative;
+      padding-right: 28px;
+    }
+    .chat-copy-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: var(--radius-xs);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .chat-copy-btn:hover {
+      background: var(--border-subtle);
+      color: var(--text-primary);
+    }
+    .chat-copy-btn:focus-visible {
+      outline: 2px solid var(--accent-teal);
+      outline-offset: 2px;
+    }
+
     .chat-bubble .chat-md p { margin: 0 0 6px; }
     .chat-bubble .chat-md p:last-child { margin-bottom: 0; }
     .chat-bubble .chat-md pre {
@@ -798,6 +827,11 @@
     .chat-tool-item .tool-name {
       font-family: var(--font-mono);
       color: var(--accent-teal);
+    }
+
+    .chat-analysing {
+      color: var(--text-muted);
+      font-size: 14px;
     }
 
     .chat-typing-dots {
@@ -1551,15 +1585,15 @@
         <div :class="['chat-bubble', msg.role === 'user' ? 'user' : 'bot']">
           <div v-if="msg.role === 'user'">{{ msg.content }}</div>
           <template v-else>
-            <div v-if="msg.toolCalls?.length" class="chat-tool-block">
-              <div v-for="(t, i) in msg.toolCalls" :key="i" class="chat-tool-item">
-                <span class="tool-name">{{ t.name }}</span>
-                <span v-if="t.input?.query" style="color:var(--text-muted);font-family:var(--font-mono);font-size:12px;">{{ t.input.query }}</span>
-              </div>
+            <div v-if="msg.content" class="chat-bubble-bot-inner">
+              <button type="button" class="chat-copy-btn" @click.stop="copyChatMd(msg.content, idx)" :title="copiedChatIdx === idx ? 'Copied' : 'Copy markdown'">
+                <template v-if="copiedChatIdx === idx">✓</template>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+              <div class="chat-md" v-html="msg.html"></div>
             </div>
-            <div v-if="msg.content" class="chat-md" v-html="msg.html"></div>
-            <div v-else-if="chatLoading && idx === chatMessages.length - 1" class="chat-typing-dots">
-              <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+            <div v-else-if="chatLoading && idx === chatMessages.length - 1" class="chat-analysing">
+              Analysing…
             </div>
           </template>
         </div>
@@ -1818,6 +1852,15 @@ createApp({
     }
     const chatThreadId = ref(newThreadId());
     const chatMessagesRef = ref(null);
+    const copiedChatIdx = ref(-1);
+    async function copyChatMd(text, idx) {
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        copiedChatIdx.value = idx;
+        setTimeout(() => { copiedChatIdx.value = -1; }, 1500);
+      } catch (_) {}
+    }
     const videoPlayerRef = ref(null);
     const tick = ref(Date.now());
 
@@ -2009,7 +2052,7 @@ createApp({
       streamUrl, streamActive, rightTab, videos, selectedVideo, videoUploading, selectVideo, onVideoUpload,
       status, events, detections, animals, shortenId, isDangerous, onStreamError,
       thumbnailUrl, thumbnailExists, onThumbError, timeAgo, formatTime,
-      chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, sendChatMessage, resetChat, onChatBodyClick,
+      chatOpen, chatMessages, chatInput, chatLoading, chatMessagesRef, copiedChatIdx, copyChatMd, sendChatMessage, resetChat, onChatBodyClick,
       settingsOpen, settingsForm, settingsSaving, settingsMessage, resetDbLoading, loadSettings, saveSettings, resetDb, toggleTracking,
       detectionModalOpen, detectionDetail, detectionModalLoading, openDetectionModal, closeDetectionModal, videoClipUrl, hasClipFrames, recordingUrl, formatDuration,
       videoPlayerRef, playerState, progressFill, progressBuffered,

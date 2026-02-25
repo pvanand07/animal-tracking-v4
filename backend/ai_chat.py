@@ -2,6 +2,8 @@
 
 import json
 import logging
+import os
+from datetime import datetime
 from typing import Optional, AsyncIterator
 
 import httpx
@@ -9,10 +11,34 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 
 from config import config
 
+# Single shared checkpointer so the same thread_id keeps conversation history across requests.
+_chat_checkpointer = MemorySaver()
+
+# Log chat turns (user, tool calls/results, assistant) to backend/chat/<thread_id>.md
+CHAT_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat")
+
 logger = logging.getLogger(__name__)
+
+
+def _safe_thread_filename(thread_id: str) -> str:
+    """Sanitize thread_id for use as a filename (one .md file per thread)."""
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(thread_id))
+    return f"{safe}.md" if safe else "default.md"
+
+
+def _append_chat_log(content: str, thread_id: str) -> None:
+    """Append content to the chat log markdown file for this thread in the chat folder."""
+    try:
+        os.makedirs(CHAT_LOG_DIR, exist_ok=True)
+        path = os.path.join(CHAT_LOG_DIR, _safe_thread_filename(thread_id))
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(content)
+    except OSError as e:
+        logger.warning("Could not write chat log: %s", e)
 
 # ── Tools (call tracker API) ────────────────────────────────────
 
@@ -76,9 +102,9 @@ Only SELECT queries are allowed; do not attempt INSERT/UPDATE/DELETE. Be concise
 
 
 def create_model(model_id: Optional[str] = None) -> ChatOpenAI:
-    """Create ChatOpenAI wired to OpenRouter."""
+    """Create ChatOpenAI wired to OpenRouter; uses offline LLM model by default for chat."""
     return ChatOpenAI(
-        model=model_id or config.llm_model,
+        model=model_id or config.llm_model_offline,
         openai_api_key=config.openrouter_api_key,
         base_url=config.openrouter_base_url.rstrip("/"),
         temperature=0.2,
@@ -86,13 +112,14 @@ def create_model(model_id: Optional[str] = None) -> ChatOpenAI:
 
 
 def create_agent(model_id: Optional[str] = None):
-    """Build ReAct agent with schema + SQL tools and OpenRouter."""
+    """Build ReAct agent with schema + SQL tools, OpenRouter, and shared in-memory chat history."""
     model = create_model(model_id)
     tools = get_tools()
     return create_react_agent(
         model,
         tools=tools,
         prompt=SYSTEM_PROMPT,
+        checkpointer=_chat_checkpointer,
     )
 
 
@@ -101,19 +128,25 @@ def create_agent(model_id: Optional[str] = None):
 async def process_message(
     message: str,
     thread_id: str = "default",
+    user_id: str = "default",
     model_id: Optional[str] = None,
 ) -> AsyncIterator[dict]:
     """
     Process a user message with the agent and stream events.
+    Conversation history is persisted per thread_id (and user_id) via the checkpointer.
     Yields: {"type": "chunk", "content": str} | {"type": "tool_start", "name": str, "input": ...}
             | {"type": "tool_end", "name": str, "output": str} | {"type": "full_response", "content": str}
     """
     agent = create_agent(model_id)
-    config = {"configurable": {"thread_id": thread_id}}
+    run_config = {"configurable": {"thread_id": thread_id, "user_id": user_id}}
+
+    # Log turn start (user message) to chat folder
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _append_chat_log(f"## Turn {ts} (thread: {thread_id})\n\n### User\n\n{message}\n\n", thread_id)
 
     async for event in agent.astream_events(
         {"messages": [HumanMessage(content=message)]},
-        config=config,
+        config=run_config,
         version="v2",
     ):
         kind = event.get("event")
@@ -129,19 +162,27 @@ async def process_message(
             messages = output.get("messages", [])
             for msg in messages:
                 if getattr(msg, "content", None) and not getattr(msg, "tool_calls", None):
-                    yield {"type": "full_response", "content": msg.content}
+                    content = msg.content
+                    _append_chat_log(f"### Assistant\n\n{content}\n\n---\n\n", thread_id)
+                    yield {"type": "full_response", "content": content}
                     break
 
         # Tool calls: LangGraph may emit tool_calls in different events
         elif kind == "on_tool_start":
+            name = data.get("name", "")
+            inp = data.get("input", {})
+            _append_chat_log(f"### Tool: `{name}`\n\nInput:\n```json\n{json.dumps(inp, indent=2)}\n```\n\n", thread_id)
             yield {
                 "type": "tool_start",
-                "name": data.get("name", ""),
-                "input": data.get("input", {}),
+                "name": name,
+                "input": inp,
             }
         elif kind == "on_tool_end":
+            name = data.get("name", "")
+            output = str(data.get("output", ""))
+            _append_chat_log(f"Result:\n```\n{output}\n```\n\n", thread_id)
             yield {
                 "type": "tool_end",
-                "name": data.get("name", ""),
-                "output": str(data.get("output", "")),
+                "name": name,
+                "output": output,
             }

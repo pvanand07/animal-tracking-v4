@@ -139,11 +139,14 @@ class Tracker:
                     if results and results[0].boxes is not None and results[0].boxes.id is not None:
                         boxes = results[0].boxes
                         for i in range(len(boxes)):
+                            cls_id = int(boxes.cls[i].item())
+                            cls_name = self.model.names.get(cls_id, "unknown")
+                            if cls_name == "person":
+                                continue  # Ignore humans
+
                             track_id = int(boxes.id[i].item())
                             bbox = boxes.xyxy[i].cpu().numpy().tolist()
                             conf = float(boxes.conf[i].item())
-                            cls_id = int(boxes.cls[i].item())
-                            cls_name = self.model.names.get(cls_id, "unknown")
 
                             detections.append({
                                 "track_id": track_id,
@@ -152,12 +155,10 @@ class Tracker:
                                 "confidence": conf,
                             })
 
-                            # Annotate frame
+                            # Annotate frame: bounding box only, no class id/label
                             x1, y1, x2, y2 = [int(v) for v in bbox]
                             color = self._track_color(track_id)
                             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-                            label = f"#{track_id} {cls_name} {conf:.2f}"
-                            self._draw_label(annotated, label, x1, y1 - 8, color)
 
                     self._last_detections = detections
 

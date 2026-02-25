@@ -478,6 +478,7 @@ def api_agent_query(body: QueryRequest = Body(...)):
 class ChatRequest(BaseModel):
     message: str
     thread_id: str = "default"
+    user_id: Optional[str] = None
     model_id: Optional[str] = None
 
 
@@ -486,6 +487,7 @@ async def chat_stream(request: ChatRequest):
     async for event in chat_process_message(
         request.message,
         thread_id=request.thread_id,
+        user_id=request.user_id or "default",
         model_id=request.model_id,
     ):
         yield json.dumps(event, ensure_ascii=False) + "\n"

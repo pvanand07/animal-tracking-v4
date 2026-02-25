@@ -26,6 +26,7 @@ _SCHEMA = {
     "webcam_index": ("0", int),
     "openrouter_api_key": ("", str),
     "openrouter_base_url": ("https://openrouter.ai/api/v1", str),
+    "llm_model_offline": ("google/gemini-3-flash-preview", str),
     "thumbnails_dir": ("thumbnails", str),
     "database_path": ("animal_tracker.db", str),
     "host": ("0.0.0.0", str),
@@ -114,8 +115,10 @@ class Config:
 
     @property
     def llm_model(self) -> str:
+        """Online LLM (e.g. with search). Use llm_model_offline for chat."""
         return "google/gemini-3-flash-preview:online"
 
+    
     def update(self, data: dict) -> None:
         self._overrides.update(data)
         CONFIG_JSON.write_text(json.dumps(self._overrides, indent=2), encoding="utf-8")
