@@ -118,9 +118,10 @@ class RecordingCoordinator:
         h = self._height or 720
 
         ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        cam_id = (getattr(config, "cam_id", None) or "cam0").replace("/", "_")
         recordings_dir = Path(config.recordings_dir)
         recordings_dir.mkdir(parents=True, exist_ok=True)
-        output_path = str(recordings_dir / f"{vid_id}_{ts_str}.mp4")
+        output_path = str(recordings_dir / f"{ts_str}_{cam_id}.mp4")
 
         log.info(
             "_start_recording: vid_id=%s preroll_frames=%d ring_maxlen=%d fps=%.1f size=%dx%d output=%s",

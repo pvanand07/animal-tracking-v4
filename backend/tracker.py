@@ -28,6 +28,14 @@ class Tracker:
     - Puts annotated JPEG frames into a shared buffer for streaming
     - Feeds detections into the EventManager using real wall-clock time
     - Fans out raw BGR frames to RingBuffer and RecordingCoordinator
+
+    Jetson load reduction (config.json or env):
+    - inference_interval: run YOLO every Nth frame only (default 4); higher = less GPU
+    - stream_fps: cap capture/stream rate (e.g. 8–10)
+    - inference_imgsz: smaller input size (320–480); must match .engine if using TensorRT
+    - inference_half: true for FP16
+    - stream_jpeg_quality: lower (e.g. 60) reduces CPU for encoding
+    - yolo_confidence: higher = fewer detections (e.g. 0.65–0.7)
     """
 
     def __init__(self, event_manager: EventManager, recording_coordinator=None):
@@ -43,7 +51,7 @@ class Tracker:
         self.fps = 0.0
         self.video_finished = False
         self._last_detections: list = []
-        self._last_annotated: bytes | None = None
+        self._last_annotations: dict | None = None
         self.ring_buffer = RingBuffer(fps=config.stream_fps, preroll_s=config.preroll_seconds)
 
     @property
@@ -114,8 +122,10 @@ class Tracker:
 
                 run_inference = (
                     self.frame_count % config.inference_interval == 0
-                    or self._last_annotated is None
+                    or self._last_annotations is None
                 )
+
+                source_label = f"CAM:{config.webcam_index}" if use_webcam else "VIDEO"
 
                 if run_inference:
                     # TensorRT .engine models use a fixed input size; infer from filename (e.g. yolo26n-480.engine) or default 640
@@ -134,15 +144,15 @@ class Tracker:
 
                     # Extract detections
                     detections = []
-                    annotated = frame.copy()
 
                     if results and results[0].boxes is not None and results[0].boxes.id is not None:
                         boxes = results[0].boxes
                         for i in range(len(boxes)):
                             cls_id = int(boxes.cls[i].item())
                             cls_name = self.model.names.get(cls_id, "unknown")
+                            # Skip humans (person class)
                             if cls_name == "person":
-                                continue  # Ignore humans
+                                continue
 
                             track_id = int(boxes.id[i].item())
                             bbox = boxes.xyxy[i].cpu().numpy().tolist()
@@ -155,41 +165,28 @@ class Tracker:
                                 "confidence": conf,
                             })
 
-                            # Annotate frame: bounding box only, no class id/label
-                            x1, y1, x2, y2 = [int(v) for v in bbox]
-                            color = self._track_color(track_id)
-                            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-
                     self._last_detections = detections
-
-                    # Draw FPS / source overlay
-                    source_label = f"CAM:{config.webcam_index}" if use_webcam else "VIDEO"
-                    cv2.putText(
-                        annotated,
-                        f"FPS: {self.fps:.1f} | Tracks: {len(detections)} | {source_label}",
-                        (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8,
-                        (0, 255, 200),
-                        2,
-                    )
-
-                    # Encode annotated frame as JPEG
-                    _, jpeg = cv2.imencode(
-                        ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 75]
-                    )
-                    frame_bytes = jpeg.tobytes()
-                    self._last_annotated = frame_bytes
+                    self._last_annotations = {"detections": detections, "source_label": source_label}
 
                     self.event_manager.update(
                         detections, frame, loop_start, self.frame_count, skip_crop_update=False
                     )
                 else:
-                    # Reuse last inference result (no YOLO run — reduces load)
-                    frame_bytes = self._last_annotated
+                    # No YOLO run — reuse cached annotation data (reduces GPU load)
                     self.event_manager.update(
                         self._last_detections, frame, loop_start, self.frame_count, skip_crop_update=True
                     )
+
+                # Stream every frame; only draw bounding boxes on inference frames
+                if run_inference:
+                    annotations = self._last_annotations or {"detections": [], "source_label": source_label}
+                    annotated = self._draw_annotations(frame, annotations)
+                else:
+                    annotated = self._draw_status_overlay(frame, source_label)
+                _, jpeg = cv2.imencode(
+                    ".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, config.stream_jpeg_quality]
+                )
+                frame_bytes = jpeg.tobytes()
 
                 with self._frame_lock:
                     self._latest_frame = frame_bytes
@@ -223,6 +220,20 @@ class Tracker:
                 log.info("Looping video...")
                 self.model = YOLO(config.yolo_model_path)
 
+    def _draw_annotations(self, frame: np.ndarray, annotations: dict) -> np.ndarray:
+        """Draw bounding boxes and overlay text onto a raw frame (inference frames only)."""
+        annotated = frame.copy()
+        detections = annotations.get("detections", [])
+        for det in detections:
+            x1, y1, x2, y2 = [int(v) for v in det["bbox"]]
+            color = self._track_color(det["track_id"])
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+        return annotated
+
+    def _draw_status_overlay(self, frame: np.ndarray, source_label: str) -> np.ndarray:
+        """Return frame unchanged (no top text overlay)."""
+        return frame.copy()
+
     @staticmethod
     def _track_color(track_id: int) -> tuple:
         hue = (track_id * 47) % 180
@@ -230,14 +241,3 @@ class Tracker:
         color_bgr = cv2.cvtColor(color_hsv, cv2.COLOR_HSV2BGR)[0][0]
         return tuple(int(c) for c in color_bgr)
 
-    @staticmethod
-    def _draw_label(img, text, x, y, color):
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        scale = 0.5
-        thickness = 1
-        (tw, th), baseline = cv2.getTextSize(text, font, scale, thickness)
-        y = max(y, th + 4)
-        cv2.rectangle(img, (x, y - th - 4), (x + tw + 4, y + 4), color, -1)
-        brightness = sum(color) / 3
-        txt_color = (0, 0, 0) if brightness > 127 else (255, 255, 255)
-        cv2.putText(img, text, (x + 2, y), font, scale, txt_color, thickness)

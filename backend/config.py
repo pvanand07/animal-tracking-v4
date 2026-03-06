@@ -11,13 +11,14 @@ _BACKEND = Path(__file__).parent
 # Schema: key -> (default, cast). Overrides: config.json > env (KEY_NAME) > default.
 _SCHEMA = {
     "video_path": ("input_videos/video.mp4", str),
-    "yolo_model": ("yolo26n.engine", str),
+    "yolo_model": ("yolo26n-480.engine", str),
     "yolo_confidence": ("0.6", float),
     "tracker_config": ("bytetrack.yaml", str),
     "stream_fps": ("12", int),
-    "inference_imgsz": ("640", int),
+    "inference_imgsz": ("480", int),
     "inference_half": ("true", lambda v: v if isinstance(v, bool) else str(v).lower() == "true"),
     "inference_interval": ("4", int),
+    "stream_jpeg_quality": ("75", int),
     "loop_video": ("true", lambda v: v if isinstance(v, bool) else str(v).lower() == "true"),
     "event_start_threshold_s": ("1.5", float),
     "event_end_threshold_s": ("2.5", float),
@@ -37,6 +38,7 @@ _SCHEMA = {
     "cooldown_seconds": ("5.0", float),
     "max_clip_seconds": ("300", int),
     "recordings_dir": ("recordings", str),
+    "cam_id": ("cam0", str),
 }
 
 
@@ -78,6 +80,8 @@ class Config:
             return max(0.0, min(1.0, float(v)))
         if key == "inference_interval":
             return max(1, int(v))
+        if key == "stream_jpeg_quality":
+            return max(50, min(95, int(v)))
         if key == "inference_imgsz":
             return max(320, min(1280, int(v)))
         return v
@@ -139,6 +143,7 @@ class Config:
             "yolo_model": self.yolo_model,
             "yolo_confidence": self.yolo_confidence,
             "stream_fps": self.stream_fps,
+            "stream_jpeg_quality": self.stream_jpeg_quality,
             "inference_imgsz": self.inference_imgsz,
             "inference_half": self.inference_half,
             "inference_interval": self.inference_interval,

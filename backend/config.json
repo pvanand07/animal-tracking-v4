@@ -1,9 +1,9 @@
 {
   "video_path": "input_videos/video.mp4",
-  "yolo_model": "best.engine",
+  "yolo_model": "yolo26n-480.engine",
   "yolo_confidence": 0.6,
-  "stream_fps": 12,
-  "inference_imgsz": 640,
+  "stream_fps": 24,
+  "inference_imgsz": 480,
   "inference_half": true,
   "inference_interval": 4,
   "loop_video": true,

@@ -1,5 +1,6 @@
 """LangChain agent with OpenRouter and tracker tools (schema + read-only SQL)."""
 
+import csv
 import json
 import logging
 import os
@@ -20,6 +21,8 @@ _chat_checkpointer = MemorySaver()
 
 # Log chat turns (user, tool calls/results, assistant) to backend/chat/<thread_id>.md
 CHAT_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chat")
+CHAT_CSV_PATH = os.path.join(CHAT_LOG_DIR, "chat_entries.csv")
+CSV_HEADER = ("timestamp", "thread_id", "role", "content")
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,21 @@ def _append_chat_log(content: str, thread_id: str) -> None:
             f.write(content)
     except OSError as e:
         logger.warning("Could not write chat log: %s", e)
+
+
+def _append_chat_csv(thread_id: str, role: str, content: str) -> None:
+    """Append one chat entry to the single CSV (chat_entries.csv)."""
+    try:
+        os.makedirs(CHAT_LOG_DIR, exist_ok=True)
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        file_exists = os.path.isfile(CHAT_CSV_PATH)
+        with open(CHAT_CSV_PATH, "a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL)
+            if not file_exists:
+                writer.writerow(CSV_HEADER)
+            writer.writerow((ts, thread_id, role, content))
+    except OSError as e:
+        logger.warning("Could not write chat CSV: %s", e)
 
 # ── Tools (call tracker API) ────────────────────────────────────
 
@@ -94,11 +112,15 @@ SYSTEM_PROMPT = """You are a helpful assistant for the Animal Tracker system. Yo
 When users ask about data (detections, events, animals, counts, etc.):
 1. Call get_tracker_schema to see the schema.
 2. Use run_tracker_sql with valid SELECT queries to get the data.
-3. Summarize results clearly. If a query fails, suggest a correction or ask for clarification.
+3. Run as many queries as needed to analyze the data and answer the question.
+4. Make sure to return tracking_id in the results if the events need to be displayed in the UI.
+5. Summarize results clearly. If a query fails, suggest a correction or ask for clarification.
 
-When you mention a specific detection by its tracking_id, include it in the format <tracking_id>id</tracking_id> so the UI can show a "View detection" button that opens the detection modal and allows video playback. Example: "The detection <tracking_id>abc-123-def</tracking_id> is a lion." Use the exact tracking_id value from the database (e.g. from detections or events).
-
-Only SELECT queries are allowed; do not attempt INSERT/UPDATE/DELETE. Be concise and accurate."""
+Displaying detections in the chat:
+- To add a "View" button that opens the detection in the UI, use: <tracking_id>TRACKING_ID</tracking_id>
+- To show the detection thumbnail image inline in the chat, use: <img src="/thumbnails/TRACKING_ID.jpg" alt="Detection thumbnail" /> or the shorthand <thumbnail>TRACKING_ID</thumbnail> (use the tracking_id from your query results, e.g. 1_c6c10). You can show multiple thumbnails when listing several detections. Prefer showing thumbnails when the user asks to see or identify animals, or when summarizing specific detections.
+- While rendering thumbaniles, view button is added to the image, hence seperate view button is not needed.
+Provide concise, grounded, well-formatted responses."""
 
 
 def create_model(model_id: Optional[str] = None) -> ChatOpenAI:
@@ -140,9 +162,19 @@ async def process_message(
     agent = create_agent(model_id)
     run_config = {"configurable": {"thread_id": thread_id, "user_id": user_id}}
 
-    # Log turn start (user message) to chat folder
+    # Log turn start: request payload + user message
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    _append_chat_log(f"## Turn {ts} (thread: {thread_id})\n\n### User\n\n{message}\n\n", thread_id)
+    request_payload = {"message": message, "thread_id": thread_id, "model_id": model_id}
+    _append_chat_log(
+        f"## Turn {ts} (thread: {thread_id})\n\n"
+        f"### Request\n\n```json\n{json.dumps(request_payload, indent=2)}\n```\n\n"
+        f"### User\n\n{message}\n\n",
+        thread_id,
+    )
+    _append_chat_csv(thread_id, "user", message)
+
+    response_parts: list[str] = []
+    final_content: Optional[str] = None
 
     async for event in agent.astream_events(
         {"messages": [HumanMessage(content=message)]},
@@ -155,16 +187,17 @@ async def process_message(
         if kind == "on_chat_model_stream":
             chunk = data.get("chunk")
             if chunk and getattr(chunk, "content", None):
-                yield {"type": "chunk", "content": chunk.content}
+                content = chunk.content
+                response_parts.append(content)
+                yield {"type": "chunk", "content": content}
 
         elif kind == "on_chain_end" and data.get("name") == "Agent":
             output = data.get("output", {})
             messages = output.get("messages", [])
             for msg in messages:
                 if getattr(msg, "content", None) and not getattr(msg, "tool_calls", None):
-                    content = msg.content
-                    _append_chat_log(f"### Assistant\n\n{content}\n\n---\n\n", thread_id)
-                    yield {"type": "full_response", "content": content}
+                    final_content = msg.content
+                    yield {"type": "full_response", "content": final_content}
                     break
 
         # Tool calls: LangGraph may emit tool_calls in different events
@@ -172,6 +205,7 @@ async def process_message(
             name = data.get("name", "")
             inp = data.get("input", {})
             _append_chat_log(f"### Tool: `{name}`\n\nInput:\n```json\n{json.dumps(inp, indent=2)}\n```\n\n", thread_id)
+            _append_chat_csv(thread_id, f"tool:{name}", json.dumps(inp))
             yield {
                 "type": "tool_start",
                 "name": name,
@@ -181,8 +215,15 @@ async def process_message(
             name = data.get("name", "")
             output = str(data.get("output", ""))
             _append_chat_log(f"Result:\n```\n{output}\n```\n\n", thread_id)
+            _append_chat_csv(thread_id, f"tool_result:{name}", output)
             yield {
                 "type": "tool_end",
                 "name": name,
                 "output": output,
             }
+
+    # Log assistant response (from final message or accumulated streamed chunks)
+    response_text = final_content if final_content is not None else "".join(response_parts)
+    if response_text.strip():
+        _append_chat_log(f"### Assistant\n\n{response_text}\n\n---\n\n", thread_id)
+        _append_chat_csv(thread_id, "assistant", response_text)
