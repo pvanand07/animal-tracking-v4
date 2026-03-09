@@ -228,6 +228,31 @@ def get_recording(vid_id: str) -> dict | None:
         return dict(row) if row else None
 
 
+def get_recording_by_filepath(filepath: str) -> dict | None:
+    """Return recording row whose filepath matches (exact or normalized)."""
+    from pathlib import Path
+    with get_db() as db:
+        # Try exact match first
+        row = db.execute(
+            "SELECT * FROM recordings WHERE filepath = ?", (filepath,)
+        ).fetchone()
+        if row:
+            return dict(row)
+        # Try resolved path
+        resolved = str(Path(filepath).resolve())
+        row = db.execute(
+            "SELECT * FROM recordings WHERE filepath = ?", (resolved,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def delete_recording(vid_id: str) -> None:
+    """Remove recording and clear event references."""
+    with get_db() as db:
+        db.execute("UPDATE events SET vid_id = NULL WHERE vid_id = ?", (vid_id,))
+        db.execute("DELETE FROM recordings WHERE vid_id = ?", (vid_id,))
+
+
 # ── AI Detections ──────────────────────────────────────────────
 
 def upsert_ai_detection(tracking_id: str, common_name: str, scientific_name: str, description: str):

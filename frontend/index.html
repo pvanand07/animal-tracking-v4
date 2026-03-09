@@ -517,7 +517,27 @@
     .settings-hint { font-size: 11px; color: var(--text-muted); padding: 0 20px 4px; }
     .settings-form { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 12px; }
     .s-row { display: flex; flex-direction: column; gap: 4px; }
+    .s-label-row { display: flex; align-items: center; gap: 6px; }
     .s-row label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+    .s-info-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+    .s-info-btn {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 1px solid var(--text-muted); background: transparent;
+      color: var(--text-muted); font-size: 11px; font-weight: 700;
+      cursor: default; display: inline-flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: color 0.2s, border-color 0.2s;
+    }
+    .s-info-wrap:hover .s-info-btn { color: var(--accent-warm); border-color: var(--accent-warm); }
+    .s-tooltip {
+      position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+      margin-bottom: 6px; padding: 10px 12px;
+      background: var(--bg-elevated); border: 1px solid var(--border-medium);
+      border-radius: var(--radius-sm); font-size: 12px; color: var(--text-primary);
+      line-height: 1.5; white-space: normal; max-width: 280px; min-width: 200px;
+      pointer-events: none; z-index: 20; box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+      opacity: 0; visibility: hidden; transition: none;
+    }
+    .s-info-wrap:hover .s-tooltip { opacity: 1; visibility: visible; }
     .s-row input[type="text"], .s-row input[type="number"], .s-row input[type="password"], .s-row select {
       padding: 8px 12px; border-radius: var(--radius-xs); border: 1px solid var(--border-subtle);
       background: var(--bg-base); color: var(--text-primary); font-family: var(--font-mono); font-size: 12px;
@@ -906,16 +926,22 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <div class="modal-body" style="padding-top:12px">
+      <div class="modal-body" style="padding-top:72px">
         <p class="settings-hint">Changes apply immediately.</p>
         <div class="settings-form">
           <div class="s-row s-row-check"><label><input v-model="settingsForm.use_webcam" type="checkbox" /> Use Webcam (live camera feed)</label></div>
           <div v-if="settingsForm.use_webcam" class="s-row">
-            <label>Webcam Index</label>
+            <div class="s-label-row">
+              <label>Webcam Index</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Camera device number (0 = default). Use 1, 2, … for additional cameras.</span></span>
+            </div>
             <input v-model.number="settingsForm.webcam_index" type="number" min="0" max="10" placeholder="0" style="max-width:120px" />
           </div>
           <div v-else class="s-row">
-            <label>Video Source</label>
+            <div class="s-label-row">
+              <label>Video Source</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Pre-uploaded or selected video file. Supports MP4, AVI, MOV, MKV, WebM.</span></span>
+            </div>
             <div class="s-video-row">
               <select v-model="selectedVideo" @change="selectVideo">
                 <option value="">No video</option>
@@ -928,13 +954,54 @@
               <span v-if="videoUploading" style="font-size:11px;color:var(--text-muted)">Uploading…</span>
             </div>
           </div>
-          <div class="s-row"><label>YOLO Model</label><input v-model="settingsForm.yolo_model" type="text" placeholder="best.pt" /></div>
-          <div class="s-row"><label>Confidence</label><input v-model.number="settingsForm.yolo_confidence" type="number" step="0.05" min="0" max="1" /></div>
-          <div class="s-row"><label>Stream FPS</label><input v-model.number="settingsForm.stream_fps" type="number" min="1" max="60" /></div>
-          <div class="s-row"><label>Event Start (s)</label><input v-model.number="settingsForm.event_start_threshold_s" type="number" step="0.1" min="0" /></div>
-          <div class="s-row"><label>Event End (s)</label><input v-model.number="settingsForm.event_end_threshold_s" type="number" step="0.1" min="0" /></div>
-          <div class="s-row"><label>Auto-Pause (min)</label><input v-model.number="settingsForm.auto_pause_minutes" type="number" min="1" max="120" /></div>
-          <div class="s-row s-row-check"><label><input v-model="settingsForm.loop_video" type="checkbox" /> Loop video</label></div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>YOLO Model</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">TensorRT engine filename (e.g. yolo26n-480.engine). Must exist in the backend models directory.</span></span>
+            </div>
+            <input v-model="settingsForm.yolo_model" type="text" placeholder="best.pt" />
+          </div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>Confidence</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Detection threshold (0–1). Higher = fewer false positives, may miss distant animals. Lower = more detections, more noise.</span></span>
+            </div>
+            <input v-model.number="settingsForm.yolo_confidence" type="number" step="0.05" min="0" max="1" />
+          </div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>Stream FPS</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Target frames per second for view and processing. Lower FPS saves CPU/GPU; higher gives smoother video.</span></span>
+            </div>
+            <input v-model.number="settingsForm.stream_fps" type="number" min="1" max="60" />
+          </div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>Event Start (s)</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Seconds an object must be tracked continuously before an event is created. Filters brief flickers.</span></span>
+            </div>
+            <input v-model.number="settingsForm.event_start_threshold_s" type="number" step="0.1" min="0" />
+          </div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>Event End (s)</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">Seconds an object can be lost before the event is marked ended. Longer values keep events alive through short occlusions.</span></span>
+            </div>
+            <input v-model.number="settingsForm.event_end_threshold_s" type="number" step="0.1" min="0" />
+          </div>
+          <div class="s-row">
+            <div class="s-label-row">
+              <label>Auto-Pause (min)</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">The app auto-pauses after n minutes after startup to save resources and inference cost.</span></span>
+            </div>
+            <input v-model.number="settingsForm.auto_pause_minutes" type="number" min="1" max="120" />
+          </div>
+          <div class="s-row s-row-check">
+            <div class="s-label-row">
+              <label><input v-model="settingsForm.loop_video" type="checkbox" /> Loop video</label>
+              <span class="s-info-wrap"><button type="button" class="s-info-btn">i</button><span class="s-tooltip">When enabled, the selected video restarts from the beginning when it finishes.</span></span>
+            </div>
+          </div>
         </div>
         <div class="settings-footer">
           <button type="button" class="btn-primary" @click="saveSettings" :disabled="settingsSaving">Save</button>

@@ -33,7 +33,7 @@ VLM_PROMPT = """Identify the animal in this image. If you can, output a JSON obj
 - common_name: common English name (or null)
 - scientific_name: scientific/Latin name (or null)
 - description: 1-2 sentence description
-If it's not an animal or not identifiable, set common_name and scientific_name to null and description to "not identifiable"."""
+If it's not an animal (e.g. a human), or not identifiable, set common_name and scientific_name to null and description to "not identifiable"."""
 
 VLM_JSON_SCHEMA = {
     "type": "object",
@@ -45,7 +45,6 @@ VLM_JSON_SCHEMA = {
     "required": ["common_name", "scientific_name", "description"],
     "additionalProperties": False,
 }
-
 
 def identify_animal(frame_crop: np.ndarray) -> dict | None:
     """Send cropped frame to Qwen VLM for animal identification (JSON mode)."""
@@ -90,8 +89,10 @@ def identify_animal(frame_crop: np.ndarray) -> dict | None:
             log.warning("VLM response empty content")
             return None
         result = json.loads(content)
-        if result.get("common_name"):
-            log.info("VLM identified: %s (%s)", result["common_name"], result.get("scientific_name", "?"))
+        common_name = result.get("common_name")
+        scientific_name = result.get("scientific_name")
+        if common_name:
+            log.info("VLM identified: %s (%s)", common_name, scientific_name or "?")
         return result
     except Exception as e:
         log.error("VLM identification error: %s", e)
@@ -103,8 +104,9 @@ def identify_animal(frame_crop: np.ndarray) -> dict | None:
 INFO_PROMPT_TEMPLATE = """You are a wildlife database assistant with web search access.
 Look up detailed information about this animal: "{animal_name}" (scientific name: {scientific_name}).
 Use strings for all values; use "unknown" if not found.
-Include safety_info: brief guidance for human encounters (null if not an animal).
-Include is_dangerous: true if the animal can pose a threat to humans, false otherwise."""
+Include safety_info: brief guidance for human encounters (null if not an animal or if subject is a human).
+Include is_dangerous: true if the animal can pose a threat to humans, false otherwise (false for humans).
+"""
 
 # JSON schema for animal info: all ANIMAL_COLUMNS as string properties
 LLM_JSON_SCHEMA = {

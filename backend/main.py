@@ -31,6 +31,7 @@ from database import (
     init_db, get_active_events, get_all_events, get_all_detections,
     get_all_animals, get_detection_by_tracking, get_detection_detail, get_event_by_tracking_id,
     get_schema_txt, execute_read_only_query, reset_db, get_all_recordings,
+    get_recording_by_filepath, delete_recording,
 )
 from event_manager import EventManager
 from tracker import Tracker
@@ -69,6 +70,60 @@ async def broadcast_event(data: dict):
 
 # ── Lifespan ───────────────────────────────────────────────────
 
+def _cleanup_old_videos():
+    """Remove videos and thumbnails older than one week; recordings also get DB cleanup."""
+    week_sec = 7 * 24 * 3600
+    now = time.time()
+    current_video_path = Path(config.video_path).resolve()
+    backend = Path(__file__).parent
+
+    # Clean thumbnails: delete files older than a week
+    thumbnails_dir = backend / config.thumbnails_dir if not Path(config.thumbnails_dir).is_absolute() else Path(config.thumbnails_dir)
+    if thumbnails_dir.exists():
+        for f in list(thumbnails_dir.iterdir()):
+            if not f.is_file():
+                continue
+            try:
+                if now - f.stat().st_mtime > week_sec:
+                    f.unlink()
+                    log.info("Removed old thumbnail: %s", f.name)
+            except OSError as e:
+                log.warning("Could not remove thumbnail %s: %s", f, e)
+
+    # Clean input_videos: delete files older than a week, never remove current video
+    videos_dir = config.input_videos_dir
+    if videos_dir.exists():
+        for f in list(videos_dir.iterdir()):
+            if not f.is_file():
+                continue
+            try:
+                if now - f.stat().st_mtime > week_sec:
+                    if f.resolve() == current_video_path:
+                        continue
+                    f.unlink()
+                    log.info("Removed old input video: %s", f.name)
+            except OSError as e:
+                log.warning("Could not remove %s: %s", f, e)
+
+    # Clean recordings dir: delete files older than a week and their DB rows
+    recordings_dir = Path(config.recordings_dir)
+    if recordings_dir.exists():
+        for f in list(recordings_dir.iterdir()):
+            if not f.is_file():
+                continue
+            try:
+                if now - f.stat().st_mtime <= week_sec:
+                    continue
+                path_str = str(f.resolve())
+                rec = get_recording_by_filepath(path_str)
+                if rec:
+                    delete_recording(rec["vid_id"])
+                f.unlink()
+                log.info("Removed old recording: %s", f.name)
+            except OSError as e:
+                log.warning("Could not remove recording %s: %s", f, e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -76,6 +131,7 @@ async def lifespan(app: FastAPI):
     os.makedirs(config.thumbnails_dir, exist_ok=True)
     os.makedirs(config.input_videos_dir, exist_ok=True)
     os.makedirs(config.recordings_dir, exist_ok=True)
+    _cleanup_old_videos()
     # Migrate legacy video.mp4 from backend root to input_videos
     legacy_video = Path(__file__).parent / "video.mp4"
     if legacy_video.exists():
