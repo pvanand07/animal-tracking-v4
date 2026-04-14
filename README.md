@@ -9,7 +9,18 @@ pinned: false
 
 # 🦁 Animal Tracker
 
-AI-powered wildlife monitoring system that performs real-time animal detection and tracking using YOLOv8 with BoTSORT, identifies species via Qwen VLM, and enriches animal data using Gemini with web search. Features a LangChain ReAct agent for natural-language SQL querying over a SQLite database, served through a FastAPI + WebSocket + Vue.js real-time dashboard deployed in Docker.
+AI-powered wildlife monitoring system with real-time detection, species identification, and interactive querying.
+
+### Key Highlights
+
+- **Real-time Object Tracking** — YOLOv8 with BoTSORT tracker processes video streams, assigns persistent tracking IDs, and annotates frames with bounding boxes streamed via MJPEG and WebSocket
+- **VLM-based Species Identification** — Crops the best frame per tracked object and sends it to Qwen 2.5 VL 7B via OpenRouter with structured JSON schema output (common name, scientific name, description)
+- **LLM-powered Data Enrichment** — When a new species is detected, calls Gemini Flash with online search to populate 18+ fields (habitat, diet, conservation status, safety info, etc.) into a SQLite species encyclopedia
+- **LangChain ReAct Agent** — Interactive chat agent (`POST /api/chat`) with OpenRouter LLM that can inspect the database schema, run read-only SQL queries, and answer natural-language questions about detections, events, and animals
+- **Event Lifecycle Management** — Threshold-based tracking (start after 1.5s continuous presence, end after 2.5s absence) with automatic thumbnail saving, AI identification triggers, and real-time WebSocket updates to the frontend
+- **Full-stack Dashboard** — Vue.js 3 single-page app with live MJPEG video stream, real-time event feed, detection cards with thumbnails and animal details, settings panel, and an AI chat interface
+- **Docker-deployed** — Containerized with FastAPI + Uvicorn, TensorRT/Jetson support, configurable pipeline (FPS, confidence, inference interval, model selection), and runtime-editable config persisted to `config.json`
+- **Agent API** — Exposes database schema and read-only SQL execution (`GET /api/agent/schema`, `POST /api/agent/query`) for external AI agents to query detections, events, and animal data programmatically
 
 ## Architecture
 
