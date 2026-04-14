@@ -1,17 +1,15 @@
 ---
-title: Animal Tracking V2
-emoji: 📊
+title: Animal Tracking V4
+emoji: 🦁
 colorFrom: yellow
 colorTo: yellow
 sdk: docker
 pinned: false
 ---
-Check out the configuration reference at https://huggingface.co/docs/hub/sp
-
 
 # 🦁 Animal Tracker
 
-Real-time animal detection, tracking, and identification system powered by YOLO, Qwen VLM, and Gemini.
+AI-powered wildlife monitoring system that performs real-time animal detection and tracking using YOLOv8 with BoTSORT, identifies species via Qwen VLM, and enriches animal data using Gemini with web search. Features a LangChain ReAct agent for natural-language SQL querying over a SQLite database, served through a FastAPI + WebSocket + Vue.js real-time dashboard deployed in Docker.
 
 ## Architecture
 
